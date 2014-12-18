@@ -17,6 +17,10 @@ namespace Perspex.Controls
 
     public struct GridLength : IEquatable<GridLength>
     {
+        private static readonly GridLength auto = new GridLength(0, GridUnitType.Auto);
+
+        private static readonly GridLength star = new GridLength(1, GridUnitType.Star);
+
         private GridUnitType type;
 
         private double value;
@@ -44,7 +48,12 @@ namespace Perspex.Controls
 
         public static GridLength Auto 
         {
-            get { return new GridLength(0, GridUnitType.Auto); }
+            get { return auto; }
+        }
+
+        public static GridLength Star
+        {
+            get { return star; }
         }
 
         public GridUnitType GridUnitType

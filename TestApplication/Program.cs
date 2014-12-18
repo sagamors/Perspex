@@ -100,6 +100,13 @@ namespace TestApplication
             new Item { Name = "Item 3", Value = "Item 3 Value" },
         };
 
+        private static PerspexList<Item> tableData = new PerspexList<Item>
+        {
+            new Item { Name = "1", Value = "Item 1 Value" },
+            new Item { Name = "Second", Value = "This is the second value" },
+            new Item { Name = "Item 3", Value = "Item 3 Value" },
+        };
+
         static void Main(string[] args)
         {
             //LogManager.Enable(new TestLogger());
@@ -358,6 +365,15 @@ namespace TestApplication
                                     })
                             },
                             Items = listBoxData,
+                        },
+                        new Table
+                        {
+                            Columns = new TableColumns
+                            {
+                                new TableColumn<Item>("Name", x => new TextBlock { Text = x.Name }),
+                                new TableColumn<Item>("Value", x => new TextBlock { Text = x.Value })
+                            },
+                            Items = tableData,
                         }
                     }
                 },
