@@ -9,6 +9,7 @@ namespace Perspex.Themes.Default
     using System.Linq;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
+    using Perspex.Controls.Templates;
     using Perspex.Media;
     using Perspex.Styling;
 
@@ -22,7 +23,7 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(TreeView.TemplateProperty, ControlTemplate.Create<TreeView>(this.Template)),
+                        new Setter(TreeView.TemplateProperty, new ControlTemplate<TreeView>(this.Template)),
                         new Setter(TreeView.BorderBrushProperty, Brushes.Black),
                         new Setter(TreeView.BorderThicknessProperty, 1.0),
                     },
@@ -38,11 +39,12 @@ namespace Perspex.Themes.Default
                 [~Border.BackgroundProperty] = control[~TreeView.BackgroundProperty],
                 [~Border.BorderBrushProperty] = control[~TreeView.BorderBrushProperty],
                 [~Border.BorderThicknessProperty] = control[~TreeView.BorderThicknessProperty],
-                Content = new ScrollViewer
+                Child = new ScrollViewer
                 {
+                    CanScrollHorizontally = true,
                     Content = new ItemsPresenter
                     {
-                        Id = "itemsPresenter",
+                        Name = "itemsPresenter",
                         [~ItemsPresenter.ItemsProperty] = control[~TreeView.ItemsProperty],
                         [~ItemsPresenter.ItemsPanelProperty] = control[~TreeView.ItemsPanelProperty],
                     }

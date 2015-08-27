@@ -13,22 +13,47 @@ namespace Perspex.Input
     using Perspex.VisualTree;
     using Splat;
 
+    /// <summary>
+    /// Manages focus for the application.
+    /// </summary>
     public class FocusManager : IFocusManager
     {
-        private Dictionary<IFocusScope, IInputElement> focusScopes = 
+        /// <summary>
+        /// The focus scopes in which the focus is currently defined.
+        /// </summary>
+        private Dictionary<IFocusScope, IInputElement> focusScopes =
             new Dictionary<IFocusScope, IInputElement>();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FocusManager"/> class.
+        /// </summary>
+        public FocusManager()
+        {
+            InputElement.PointerPressedEvent.AddClassHandler(
+                typeof(IInputElement),
+                new EventHandler<RoutedEventArgs>(this.OnPreviewPointerPressed),
+                RoutingStrategies.Tunnel);
+        }
+
+        /// <summary>
+        /// Gets the instance of the <see cref="IFocusManager"/>.
+        /// </summary>
         public static IFocusManager Instance
         {
             get { return Locator.Current.GetService<IFocusManager>(); }
         }
 
+        /// <summary>
+        /// Gets the currently focused <see cref="IInputElement"/>.
+        /// </summary>
         public IInputElement Current
         {
-            get;
-            private set;
+            get { return KeyboardDevice.Instance.FocusedElement; }
         }
 
+        /// <summary>
+        /// Gets the current focus scope.
+        /// </summary>
         public IFocusScope Scope
         {
             get;
@@ -39,48 +64,58 @@ namespace Perspex.Input
         /// Focuses a control.
         /// </summary>
         /// <param name="control">The control to focus.</param>
-        public void Focus(IInputElement control)
+        /// <param name="method">The method by which focus was changed.</param>
+        public void Focus(IInputElement control, NavigationMethod method = NavigationMethod.Unspecified)
         {
-            Contract.Requires<ArgumentNullException>(control != null);
-
-            var current = this.Current as IInteractive;
-            var next = control as IInteractive;
-            var scope = control.GetSelfAndVisualAncestors()
-                .OfType<IFocusScope>()
-                .FirstOrDefault();
-
-            if (scope != null && control != current)
+            if (control != null)
             {
-                this.focusScopes[scope] = control;
+                var scope = GetFocusScopeAncestors(control)
+                    .FirstOrDefault();
 
-                if (current != null)
+                if (scope != null)
                 {
-                    current.RaiseEvent(new RoutedEventArgs
+                    this.Scope = scope;
+                    this.SetFocusedElement(scope, control, method);
+                }
+            }
+            else if (this.Current != null)
+            {
+                // If control is null, set focus to the topmost focus scope.
+                foreach (var scope in GetFocusScopeAncestors(this.Current).Reverse().ToList())
+                {
+                    IInputElement element;
+
+                    if (this.focusScopes.TryGetValue(scope, out element))
                     {
-                        RoutedEvent = InputElement.LostFocusEvent,
-                        Source = current,
-                        OriginalSource = current,
-                    });
+                        this.Focus(element, method);
+                        break;
+                    }
                 }
+            }
+        }
 
-                this.Current = control;
+        /// <summary>
+        /// Sets the currently focused element in the specified scope.
+        /// </summary>
+        /// <param name="scope">The focus scope.</param>
+        /// <param name="element">The element to focus. May be null.</param>
+        /// <param name="method">The method by which focus was changed.</param>
+        /// <remarks>
+        /// If the specified scope is the current <see cref="Scope"/> then the keyboard focus
+        /// will change.
+        /// </remarks>
+        public void SetFocusedElement(
+            IFocusScope scope,
+            IInputElement element,
+            NavigationMethod method = NavigationMethod.Unspecified)
+        {
+            Contract.Requires<ArgumentNullException>(scope != null);
 
-                IKeyboardDevice keyboard = Locator.Current.GetService<IKeyboardDevice>();
+            this.focusScopes[scope] = element;
 
-                if (keyboard != null)
-                {
-                    keyboard.FocusedElement = control;
-                }
-
-                if (next != null)
-                {
-                    next.RaiseEvent(new RoutedEventArgs
-                    {
-                        RoutedEvent = InputElement.GotFocusEvent,
-                        Source = next,
-                        OriginalSource = next,
-                    });
-                }
+            if (this.Scope == scope)
+            {
+                KeyboardDevice.Instance.SetFocusedElement(element, method);
             }
         }
 
@@ -88,10 +123,6 @@ namespace Perspex.Input
         /// Notifies the focus manager of a change in focus scope.
         /// </summary>
         /// <param name="scope">The new focus scope.</param>
-        /// <remarks>
-        /// This should not be called by client code. It is called by an <see cref="IFocusScope"/>
-        /// when it activates, e.g. when a Window is activated.
-        /// </remarks>
         public void SetFocusScope(IFocusScope scope)
         {
             Contract.Requires<ArgumentNullException>(scope != null);
@@ -109,6 +140,60 @@ namespace Perspex.Input
 
             this.Scope = scope;
             this.Focus(e);
+        }
+
+        /// <summary>
+        /// Checks if the specified element can be focused.
+        /// </summary>
+        /// <param name="e">The element.</param>
+        /// <returns>True if the element can be focused.</returns>
+        private static bool CanFocus(IInputElement e) => e.Focusable && e.IsEnabledCore && e.IsVisible;
+
+        /// <summary>
+        /// Gets the focus scope ancestors of the specified control, traversing popups.
+        /// </summary>
+        /// <param name="control">The control.</param>
+        /// <returns>The focus scopes.</returns>
+        private static IEnumerable<IFocusScope> GetFocusScopeAncestors(IInputElement control)
+        {
+            while (control != null)
+            {
+                var scope = control as IFocusScope;
+
+                if (scope != null)
+                {
+                    yield return scope;
+                }
+
+                control = control.GetVisualParent<IInputElement>() ??
+                    ((control as IHostedVisualTreeRoot)?.Host as IInputElement);
+            }
+        }
+
+        /// <summary>
+        /// Global handler for pointer pressed events.
+        /// </summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event args.</param>
+        private void OnPreviewPointerPressed(object sender, RoutedEventArgs e)
+        {
+            if (sender == e.Source)
+            {
+                var ev = (PointerPressEventArgs)e;
+                var element = (ev.Device.Captured as IInputElement) ?? (e.Source as IInputElement);
+
+                if (element == null || !CanFocus(element))
+                {
+                    element = element.GetSelfAndVisualAncestors()
+                        .OfType<IInputElement>()
+                        .FirstOrDefault(x => CanFocus(x));
+                }
+
+                if (element != null)
+                {
+                    this.Focus(element, NavigationMethod.Pointer);
+                }
+            }
         }
     }
 }

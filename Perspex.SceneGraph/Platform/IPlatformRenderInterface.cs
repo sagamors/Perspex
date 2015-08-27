@@ -13,10 +13,11 @@ namespace Perspex.Platform
         IBitmapImpl CreateBitmap(int width, int height);
 
         IFormattedTextImpl CreateFormattedText(
-            string text, 
-            string fontFamily, 
-            double fontSize, 
+            string text,
+            string fontFamily,
+            double fontSize,
             FontStyle fontStyle,
+            TextAlignment textAlignment,
             FontWeight fontWeight);
 
         IStreamGeometryImpl CreateStreamGeometry();

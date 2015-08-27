@@ -9,6 +9,7 @@ namespace Perspex.Themes.Default
     using System.Linq;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
+    using Perspex.Controls.Templates;
     using Perspex.Media;
     using Perspex.Styling;
 
@@ -24,10 +25,10 @@ namespace Perspex.Themes.Default
                     {
                         new Setter(TabItem.FontSizeProperty, 28.7),
                         new Setter(TabItem.ForegroundProperty, Brushes.Gray),
-                        new Setter(TabItem.TemplateProperty, ControlTemplate.Create<TabItem>(this.Template)),
+                        new Setter(TabItem.TemplateProperty, new ControlTemplate<TabItem>(this.Template)),
                     },
                 },
-                new Style(x => x.OfType<TabItem>().Class(":selected"))
+                new Style(x => x.OfType<TabItem>().Class("selected"))
                 {
                     Setters = new[]
                     {
@@ -41,7 +42,7 @@ namespace Perspex.Themes.Default
         {
             return new ContentPresenter
             {
-                Id = "headerPresenter",
+                Name = "headerPresenter",
                 [~ContentPresenter.ContentProperty] = control[~TabItem.HeaderProperty],
             };
         }

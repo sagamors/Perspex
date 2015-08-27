@@ -20,6 +20,8 @@ namespace Perspex.Cairo
     /// </summary>
     public class Renderer : RendererBase
     {
+        private ImageSurface surface;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Renderer"/> class.
         /// </summary>
@@ -28,6 +30,11 @@ namespace Perspex.Cairo
         /// <param name="height">The height of the window.</param>
         public Renderer(IPlatformHandle handle, double width, double height)
         {
+        }
+
+        public Renderer(ImageSurface surface)
+        {
+            this.surface = surface;
         }
 
         /// <summary>
@@ -51,6 +58,8 @@ namespace Perspex.Cairo
             {
                 case "HWND":
                     return new DrawingContext(new Win32Surface(GetDC(handle.Handle)));
+                case "RTB":
+                    return new DrawingContext(this.surface);
                 case "HDC":
                     return new DrawingContext(new Win32Surface(handle.Handle));
                 case "GdkWindow":

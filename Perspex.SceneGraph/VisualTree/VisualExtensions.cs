@@ -103,17 +103,24 @@ namespace Perspex.VisualTree
             return visual.VisualParent as T;
         }
 
-        public static IEnumerable<IVisual> GetVisualSiblings(this IVisual visual)
+        public static IVisual GetVisualRoot(this IVisual visual)
         {
-            IVisual parent = visual.VisualParent;
+            Contract.Requires<NullReferenceException>(visual != null);
 
-            if (parent != null)
+            var parent = visual.VisualParent;
+
+            while (parent != null)
             {
-                foreach (IVisual sibling in parent.VisualChildren)
-                {
-                    yield return sibling;
-                }
+                visual = parent;
+                parent = visual.VisualParent;
             }
+
+            return visual;
+        }
+
+        public static bool IsVisualParentOf(this IVisual visual, IVisual target)
+        {
+            return target.GetVisualAncestors().Any(x => x == visual);
         }
     }
 }

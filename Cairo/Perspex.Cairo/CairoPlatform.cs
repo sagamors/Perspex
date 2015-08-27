@@ -27,8 +27,7 @@ namespace Perspex.Cairo
 
         public IBitmapImpl CreateBitmap(int width, int height)
         {
-            throw new NotImplementedException();
-            ////return new BitmapImpl(imagingFactory, width, height);
+            return new BitmapImpl(new ImageSurface(Format.Argb32, width, height));
         }
 
         public IFormattedTextImpl CreateFormattedText(
@@ -36,9 +35,10 @@ namespace Perspex.Cairo
             string fontFamily, 
             double fontSize, 
             FontStyle fontStyle,
+            TextAlignment textAlignment,
             Perspex.Media.FontWeight fontWeight)
         {
-            return new FormattedTextImpl(text, fontFamily, fontSize, fontStyle, fontWeight);
+            return new FormattedTextImpl(text, fontFamily, fontSize, fontStyle, textAlignment, fontWeight);
         }
 
         public IRenderer CreateRenderer(IPlatformHandle handle, double width, double height)
@@ -49,7 +49,7 @@ namespace Perspex.Cairo
 
         public IRenderTargetBitmapImpl CreateRenderTargetBitmap(int width, int height)
         {
-            throw new NotImplementedException();
+            return new RenderTargetBitmapImpl(new ImageSurface(Format.Argb32, width, height));
         }
 
         public IStreamGeometryImpl CreateStreamGeometry()

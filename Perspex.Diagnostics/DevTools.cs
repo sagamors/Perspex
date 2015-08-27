@@ -7,10 +7,8 @@
 namespace Perspex.Diagnostics
 {
     using System;
-    using System.Reactive.Disposables;
     using System.Reactive.Linq;
     using Perspex.Controls;
-    using Perspex.Controls.Primitives;
     using Perspex.Diagnostics.ViewModels;
     using Perspex.Input;
     using ReactiveUI;
@@ -20,84 +18,14 @@ namespace Perspex.Diagnostics
         public static readonly PerspexProperty<Control> RootProperty =
             PerspexProperty.Register<DevTools, Control>("Root");
 
+        private DevToolsViewModel viewModel;
+
         public DevTools()
         {
-            TabStrip tabStrip;
-            TreeView treeView;
+            this.viewModel = new DevToolsViewModel();
+            this.GetObservable(RootProperty).Subscribe(x => this.viewModel.Root = x);
 
-            var treePane = new Grid
-            {
-                RowDefinitions = new RowDefinitions
-                {
-                    new RowDefinition(GridLength.Auto),
-                    new RowDefinition(new GridLength(1, GridUnitType.Star)),
-                },
-                Children = new Controls
-                {
-                    (tabStrip = new TabStrip
-                    {
-                        Items = new[]
-                        {
-                            new TabItem
-                            {
-                                Header = "Logical Tree",
-                                IsSelected = true,
-                                [!TabItem.TagProperty] = this[!RootProperty].Select(x => LogicalTreeNode.Create(x)),
-                            },
-                            new TabItem
-                            {
-                                Header = "Visual Tree",
-                                [!TabItem.TagProperty] = this[!RootProperty].Select(x => VisualTreeNode.Create(x)),
-                            }
-                        },
-                    }),
-                    (treeView = new TreeView
-                    {
-                        DataTemplates = new DataTemplates
-                        {
-                            new TreeDataTemplate<LogicalTreeNode>(GetHeader, x => x.Children),
-                            new TreeDataTemplate<VisualTreeNode>(GetHeader, x => x.Children),
-                        },
-                        [!TreeView.ItemsProperty] = tabStrip.WhenAnyValue(x => x.SelectedTab.Tag),
-                        [Grid.RowProperty] = 1,
-                    })
-                }
-            };
-
-            var detailsView = new ContentControl
-            {
-                DataTemplates = new DataTemplates
-                {
-                    new DataTemplate<ControlDetails>(CreateDetailsView),
-                },
-                [!ContentControl.ContentProperty] = treeView[!TreeView.SelectedItemProperty]
-                    .Where(x => x != null)
-                    .Cast<TreeNode>()
-                    .Select(x => new ControlDetails(x.Control)),
-                [Grid.ColumnProperty] = 2,
-            };
-
-            var splitter = new GridSplitter
-            {
-                [Grid.ColumnProperty] = 1,
-                Width = 4,
-            };
-
-            this.Content = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions
-                {
-                    new ColumnDefinition(1, GridUnitType.Star),
-                    new ColumnDefinition(4, GridUnitType.Pixel),
-                    new ColumnDefinition(3, GridUnitType.Star),
-                },
-                Children = new Controls
-                {
-                    treePane,
-                    splitter,
-                    detailsView,
-                }
-            };
+            this.InitializeComponent();
         }
 
         public Control Root
@@ -106,9 +34,12 @@ namespace Perspex.Diagnostics
             set { this.SetValue(RootProperty, value); }
         }
 
-        public static IDisposable Attach(Window w)
+        public static IDisposable Attach(Window window)
         {
-            return w.AddHandler(Window.KeyDownEvent, WindowPreviewKeyDown, Interactivity.RoutingStrategies.Tunnel);
+            return window.AddHandler(
+                Window.KeyDownEvent,
+                WindowPreviewKeyDown,
+                Interactivity.RoutingStrategies.Tunnel);
         }
 
         private static void WindowPreviewKeyDown(object sender, KeyEventArgs e)
@@ -129,65 +60,47 @@ namespace Perspex.Diagnostics
             }
         }
 
-        private static Control CreateDetailsView(ControlDetails i)
+        private void InitializeComponent()
         {
-            return new ItemsControl
+            this.DataTemplates.Add(new ViewLocator<ReactiveObject>());
+
+            this.Child = new Grid
             {
-                DataTemplates = new DataTemplates
+                RowDefinitions = new RowDefinitions("*,Auto"),
+                Children = new Controls
                 {
-                    new DataTemplate<PropertyDetails>(x =>
-                        new StackPanel
+                    new TabControl
+                    {
+                        Items = new[]
                         {
-                            Gap = 16,
-                            Orientation = Orientation.Horizontal,
-                            Children = new Controls
+                            new TabItem
                             {
-                                new TextBlock { Text = x.Name },
-                                new TextBlock { [!TextBlock.TextProperty] = x.WhenAnyValue(v => v.Value).Select(v => v.ToString()) },
-                                new TextBlock { Text = x.Priority },
+                                Header = "Logical Tree",
+                                [!TabItem.ContentProperty] = this.viewModel.WhenAnyValue(x => x.LogicalTree),
                             },
-                        }),
-                },
-                Items = i.Properties,
-            };
-        }
-
-        private static Control GetHeader(LogicalTreeNode node)
-        {
-            return new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Gap = 8,
-                Children = new Controls
-                {
-                    new TextBlock
-                    {
-                        Text = node.Type,
+                            new TabItem
+                            {
+                                Header = "Visual Tree",
+                                [!TabItem.ContentProperty] = this.viewModel.WhenAnyValue(x => x.VisualTree),
+                            }
+                        },
                     },
-                    new TextBlock
+                    new StackPanel
                     {
-                        [!TextBlock.TextProperty] = node.WhenAnyValue(x => x.Classes),
-                    }
-                }
-            };
-        }
-
-        private static Control GetHeader(VisualTreeNode node)
-        {
-            return new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Gap = 8,
-                Children = new Controls
-                {
-                    new TextBlock
-                    {
-                        Text = node.Type,
-                        FontStyle = node.IsInTemplate ? Media.FontStyle.Italic : Media.FontStyle.Normal,
-                    },
-                    new TextBlock
-                    {
-                        [!TextBlock.TextProperty] = node.WhenAnyValue(x => x.Classes),
+                        Orientation = Orientation.Horizontal,
+                        Gap = 4,
+                        [Grid.RowProperty] = 1,
+                        Children = new Controls
+                        {
+                            new TextBlock
+                            {
+                                Text = "Focused: "
+                            },
+                            new TextBlock
+                            {
+                                [!TextBlock.TextProperty] = this.viewModel.WhenAnyValue(x => x.FocusedControl).Select(x => x?.GetType().Name)
+                            }
+                        }
                     }
                 }
             };

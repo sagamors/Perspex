@@ -6,25 +6,20 @@
 
 namespace Perspex.Controls.UnitTests
 {
-    using System;
     using System.Collections.Specialized;
     using System.Linq;
     using Perspex.Collections;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
     using Perspex.Controls.Templates;
-    using Perspex.Platform;
     using Perspex.Styling;
     using Perspex.VisualTree;
-    using Ploeh.AutoFixture;
-    using Ploeh.AutoFixture.AutoMoq;
-    using Splat;
     using Xunit;
 
     public class ItemsControlTests
     {
         [Fact]
-        public void Panel_Should_Have_TemplatedParent_Set_To_ItemsPresenter()
+        public void Panel_Should_Have_TemplatedParent_Set_To_ItemsControl()
         {
             var target = new ItemsControl();
 
@@ -33,9 +28,9 @@ namespace Perspex.Controls.UnitTests
             target.ApplyTemplate();
 
             var presenter = target.GetTemplateChildren().OfType<ItemsPresenter>().Single();
-            var panel = presenter.GetTemplateChildren().OfType<StackPanel>().Single();
+            var panel = target.GetTemplateChildren().OfType<StackPanel>().Single();
 
-            Assert.Equal(presenter, panel.TemplatedParent);
+            Assert.Equal(target, panel.TemplatedParent);
         }
 
         [Fact]
@@ -48,7 +43,7 @@ namespace Perspex.Controls.UnitTests
             target.ApplyTemplate();
 
             var presenter = target.GetTemplateChildren().OfType<ItemsPresenter>().Single();
-            var panel = presenter.GetTemplateChildren().OfType<StackPanel>().Single();
+            var panel = target.GetTemplateChildren().OfType<StackPanel>().Single();
             var item = (TextBlock)panel.GetVisualChildren().First();
 
             Assert.Null(item.TemplatedParent);
@@ -238,29 +233,87 @@ namespace Perspex.Controls.UnitTests
             Assert.Same(before, after);
         }
 
+        [Fact]
+        public void Empty_Class_Should_Initially_Be_Applied()
+        {
+            var target = new ItemsControl()
+            {
+                Template = this.GetTemplate(),
+            };
+
+            Assert.True(target.Classes.Contains(":empty"));
+        }
+
+        [Fact]
+        public void Empty_Class_Should_Be_Cleared_When_Items_Added()
+        {
+            var target = new ItemsControl()
+            {
+                Template = this.GetTemplate(),
+                Items = new[] { 1, 2, 3 },
+            };
+
+            Assert.False(target.Classes.Contains(":empty"));
+        }
+
+        [Fact]
+        public void Empty_Class_Should_Be_Set_When_Empty_Collection_Set()
+        {
+            var target = new ItemsControl()
+            {
+                Template = this.GetTemplate(),
+                Items = new[] { 1, 2, 3 },
+            };
+
+            target.Items = new int[0];
+
+            Assert.True(target.Classes.Contains(":empty"));
+        }
+
+        [Fact]
+        public void Setting_Presenter_Explicitly_Should_Set_Item_Parent()
+        {
+            var target = new TestItemsControl();
+            var child = new Control();
+
+            var presenter = new ItemsPresenter
+            {
+                TemplatedParent = target,
+                [~ItemsPresenter.ItemsProperty] = target[~ItemsControl.ItemsProperty],
+            };
+
+            presenter.ApplyTemplate();
+            target.Presenter = presenter;
+            target.Items = new[] { child };
+            target.ApplyTemplate();
+
+            Assert.Equal(target, child.Parent);
+            Assert.Equal(target, ((ILogical)child).LogicalParent);
+        }
+
         private ControlTemplate GetTemplate()
         {
-            return ControlTemplate.Create<ItemsControl>(parent =>
+            return new ControlTemplate<ItemsControl>(parent =>
             {
                 return new Border
                 {
                     Background = new Perspex.Media.SolidColorBrush(0xffffffff),
-                    Content = new ItemsPresenter
+                    Child = new ItemsPresenter
                     {
-                        Id = "itemsPresenter",
+                        Name = "itemsPresenter",
                         [~ItemsPresenter.ItemsProperty] = parent[~ItemsControl.ItemsProperty],
                     }
                 };
             });
         }
 
-        private IDisposable RegisterServices()
+        private class TestItemsControl : ItemsControl
         {
-            var result = Locator.CurrentMutable.WithResolver();
-            var fixture = new Fixture().Customize(new AutoMoqCustomization());
-            var renderInterface = fixture.Create<IPlatformRenderInterface>();
-            Locator.CurrentMutable.RegisterConstant(renderInterface, typeof(IPlatformRenderInterface));
-            return result;
+            public new IItemsPresenter Presenter
+            {
+                get { return base.Presenter; }
+                set { base.Presenter = value; }
+            }
         }
     }
 }

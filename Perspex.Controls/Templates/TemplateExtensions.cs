@@ -15,20 +15,49 @@ namespace Perspex.Controls.Templates
 
     public static class TemplateExtensions
     {
-        public static T FindTemplateChild<T>(this ITemplatedControl control, string id) where T : Control
+        public static IReparentingHost FindReparentingHost(this IControl control)
         {
-            return control.GetTemplateChildren().OfType<T>().SingleOrDefault(x => x.Id == id);
+            var tp = control.TemplatedParent;
+            var chain = new List<IReparentingHost>();
+
+            while (tp != null)
+            {
+                var reparentingHost = tp as IReparentingHost;
+                var styleable = tp as IStyleable;
+
+                if (reparentingHost != null)
+                {
+                    chain.Add(reparentingHost);
+                }
+
+                tp = styleable?.TemplatedParent ?? null;
+            }
+
+            foreach (var reparenting in chain.AsEnumerable().Reverse())
+            {
+                if (reparenting.WillReparentChildrenOf(control))
+                {
+                    return reparenting;
+                }
+            }
+
+            return null;
         }
 
-        public static T GetTemplateChild<T>(this ITemplatedControl control, string id) where T : Control
+        public static T FindTemplateChild<T>(this ITemplatedControl control, string name) where T : INamed
         {
-            var result = control.FindTemplateChild<T>(id);
+            return control.GetTemplateChildren().OfType<T>().SingleOrDefault(x => x.Name == name);
+        }
+
+        public static T GetTemplateChild<T>(this ITemplatedControl control, string name) where T : INamed
+        {
+            var result = control.FindTemplateChild<T>(name);
 
             if (result == null)
             {
                 throw new InvalidOperationException(string.Format(
                     "Could not find template child '{0}' of type '{1}' in template for '{2}'.",
-                    id,
+                    name,
                     typeof(T).FullName,
                     control.GetType().FullName));
             }
@@ -42,7 +71,7 @@ namespace Perspex.Controls.Templates
 
             if (visual != null)
             {
-                // TODO: This searches the whole descendent tree - it can stop when it exits the 
+                // TODO: This searches the whole descendent tree - it can stop when it exits the
                 // template.
                 return visual.GetVisualDescendents()
                     .OfType<Control>()

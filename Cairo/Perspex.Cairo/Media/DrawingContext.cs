@@ -13,6 +13,8 @@ namespace Perspex.Cairo.Media
     using Splat;
     using Cairo = global::Cairo;
     using IBitmap = Perspex.Media.Imaging.IBitmap;
+    using System.Collections.Generic;
+
 
     /// <summary>
     /// Draws using Direct2D1.
@@ -70,10 +72,11 @@ namespace Perspex.Cairo.Media
         {
             this.context.Dispose();
 
+         //   if (this.surface is Cairo.Win32Surface)
+       //     {
             if (this.surface != null)
-            {
                 this.surface.Dispose();
-            }
+           // }
         }
 
         public void DrawImage(IBitmap bitmap, double opacity, Rect sourceRect, Rect destRect)
@@ -86,7 +89,7 @@ namespace Perspex.Cairo.Media
             this.context.Save();
             this.context.Scale(scaleX, scaleY);
             this.context.SetSourceSurface(impl.Surface, (int)sourceRect.X, (int)sourceRect.Y);
-            this.context.Rectangle(destRect.ToCairo());
+            this.context.Rectangle(sourceRect.ToCairo());
             this.context.Fill();
             this.context.Restore();
         }
@@ -114,7 +117,54 @@ namespace Perspex.Cairo.Media
         /// <param name="geometry">The geometry.</param>
         public void DrawGeometry(Perspex.Media.Brush brush, Perspex.Media.Pen pen, Perspex.Media.Geometry geometry)
         {
-            // TODO: Implement
+            var impl = geometry.PlatformImpl as StreamGeometryImpl;
+            var clone = new Queue<GeometryOp>(impl.Operations);
+      
+            using (var pop = this.PushTransform(impl.Transform))
+            {
+                while (clone.Count > 0)
+                {
+                    var current = clone.Dequeue();
+
+                    if (current is BeginOp)
+                    {
+                        var bo = current as BeginOp;
+                        this.context.MoveTo(bo.Point.ToCairo());
+                    }
+                    else if (current is LineToOp)
+                    {
+                        var lto = current as LineToOp;
+                        this.context.LineTo(lto.Point.ToCairo());
+                    }
+                    else if (current is EndOp)
+                    {
+                      if (((EndOp)current).IsClosed)
+                            this.context.ClosePath();
+                    }
+                    else if (current is CurveToOp)
+                    {
+                        var cto = current as CurveToOp;
+                        this.context.CurveTo(cto.Point.ToCairo(), cto.Point2.ToCairo(), cto.Point3.ToCairo());
+                    }
+                }
+                
+                if (brush != null)
+                {
+                    this.SetBrush(brush);
+
+                    if (pen != null)
+                        this.context.FillPreserve();
+                    else
+                        this.context.Fill();
+                }
+
+
+                if (pen != null)
+                {
+                    this.SetPen(pen);
+                    this.context.Stroke();
+                }
+            }
         }
 
         /// <summary>
@@ -122,7 +172,7 @@ namespace Perspex.Cairo.Media
         /// </summary>
         /// <param name="pen">The pen.</param>
         /// <param name="rect">The rectangle bounds.</param>
-        public void DrawRectange(Pen pen, Rect rect)
+        public void DrawRectange(Pen pen, Rect rect, float cornerRadius)
         {
             this.SetPen(pen);
             this.context.Rectangle(rect.ToCairo());
@@ -139,6 +189,7 @@ namespace Perspex.Cairo.Media
         {
             var layout = ((FormattedTextImpl)text.PlatformImpl).Layout;
             this.SetBrush(foreground);
+            
             this.context.MoveTo(origin.X, origin.Y);
             Pango.CairoHelper.ShowLayout(this.context, layout);
         }
@@ -148,7 +199,7 @@ namespace Perspex.Cairo.Media
         /// </summary>
         /// <param name="brush">The brush.</param>
         /// <param name="rect">The rectangle bounds.</param>
-        public void FillRectange(Perspex.Media.Brush brush, Rect rect)
+        public void FillRectange(Perspex.Media.Brush brush, Rect rect, float cornerRadius)
         {
             this.SetBrush(brush);
             this.context.Rectangle(rect.ToCairo());
@@ -162,11 +213,21 @@ namespace Perspex.Cairo.Media
         /// <returns>A disposable used to undo the clip rectangle.</returns>
         public IDisposable PushClip(Rect clip)
         {
-            this.context.Save();
             this.context.Rectangle(clip.ToCairo());
             this.context.Clip();
 
-            return Disposable.Create(() => this.context.Restore());
+            return Disposable.Create(() => this.context.ResetClip());
+        }
+
+        /// <summary>
+        /// Pushes an opacity value.
+        /// </summary>
+        /// <param name="opacity">The opacity.</param>
+        /// <returns>A disposable used to undo the opacity.</returns>
+        public IDisposable PushOpacity(double opacity)
+        {
+            // TODO: Implement
+            return Disposable.Empty;
         }
 
         /// <summary>
@@ -176,14 +237,11 @@ namespace Perspex.Cairo.Media
         /// <returns>A disposable used to undo the transformation.</returns>
         public IDisposable PushTransform(Matrix matrix)
         {
-            this.context.Save();
             this.context.Transform(matrix.ToCairo());
-            this.CurrentTransform *= matrix;
 
-            return Disposable.Create(() => 
+            return Disposable.Create(() =>
             {
-                this.context.Restore();
-                this.CurrentTransform *= matrix.Invert();
+                this.context.Transform(matrix.Invert().ToCairo());
             });
         }
 

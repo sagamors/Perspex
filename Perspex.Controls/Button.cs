@@ -7,9 +7,12 @@
 namespace Perspex.Controls
 {
     using System;
+    using System.Linq;
     using System.Windows.Input;
     using Perspex.Input;
     using Perspex.Interactivity;
+    using Perspex.Rendering;
+    using Perspex.VisualTree;
 
     public enum ClickMode
     {
@@ -28,6 +31,9 @@ namespace Perspex.Controls
         public static readonly PerspexProperty<object> CommandParameterProperty =
             PerspexProperty.Register<Button, object>("CommandParameter");
 
+        public static readonly PerspexProperty<bool> IsDefaultProperty =
+            PerspexProperty.Register<Button, bool>("IsDefault");
+
         public static readonly RoutedEvent<RoutedEventArgs> ClickEvent =
             RoutedEvent.Register<Button, RoutedEventArgs>("Click", RoutingStrategies.Bubble);
 
@@ -36,6 +42,7 @@ namespace Perspex.Controls
             FocusableProperty.OverrideDefaultValue(typeof(Button), true);
             ClickEvent.AddClassHandler<Button>(x => x.OnClick);
             CommandProperty.Changed.Subscribe(CommandChanged);
+            IsDefaultProperty.Changed.Subscribe(IsDefaultChanged);
         }
 
         public event EventHandler<RoutedEventArgs> Click
@@ -62,6 +69,12 @@ namespace Perspex.Controls
             set { this.SetValue(CommandParameterProperty, value); }
         }
 
+        public bool IsDefault
+        {
+            get { return this.GetValue(IsDefaultProperty); }
+            set { this.SetValue(IsDefaultProperty, value); }
+        }
+
         protected override Size MeasureOverride(Size availableSize)
         {
             return base.MeasureOverride(availableSize);
@@ -70,6 +83,69 @@ namespace Perspex.Controls
         protected override Size ArrangeOverride(Size finalSize)
         {
             return base.ArrangeOverride(finalSize);
+        }
+
+        protected override void OnAttachedToVisualTree(IRenderRoot root)
+        {
+            base.OnAttachedToVisualTree(root);
+
+            if (this.IsDefault)
+            {
+                var inputElement = root as IInputElement;
+
+                if (inputElement != null)
+                {
+                    this.ListenForDefault(inputElement);
+                }
+            }
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                this.RaiseClickEvent();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Space)
+            {
+                if (this.ClickMode == ClickMode.Press)
+                {
+                    this.RaiseClickEvent();
+                }
+
+                e.Handled = true;
+            }
+
+            base.OnKeyDown(e);
+        }
+
+        protected override void OnKeyUp(KeyEventArgs e)
+        {
+            if (e.Key == Key.Space)
+            {
+                if (this.ClickMode == ClickMode.Release)
+                {
+                    this.RaiseClickEvent();
+                }
+
+                e.Handled = true;
+            }
+        }
+
+        protected override void OnDetachedFromVisualTree(IRenderRoot oldRoot)
+        {
+            base.OnDetachedFromVisualTree(oldRoot);
+
+            if (this.IsDefault)
+            {
+                var inputElement = oldRoot as IInputElement;
+
+                if (inputElement != null)
+                {
+                    this.StopListeningForDefault(inputElement);
+                }
+            }
         }
 
         protected virtual void OnClick(RoutedEventArgs e)
@@ -131,11 +207,41 @@ namespace Perspex.Controls
             }
         }
 
+        private static void IsDefaultChanged(PerspexPropertyChangedEventArgs e)
+        {
+            var button = e.Sender as Button;
+            var isDefault = (bool)e.NewValue;
+            var root = button.GetSelfAndVisualAncestors().OfType<IRenderRoot>().FirstOrDefault();
+            var inputElement = root as IInputElement;
+
+            if (inputElement != null)
+            {
+                if (isDefault)
+                {
+                    button.ListenForDefault(inputElement);
+                }
+                else
+                {
+                    button.StopListeningForDefault(inputElement);
+                }
+            }
+        }
+
         private void CanExecuteChanged(object sender, EventArgs e)
         {
-            // HACK: Just set the IsEnabled property for the moment. This needs to be changed to 
+            // HACK: Just set the IsEnabled property for the moment. This needs to be changed to
             // use IsEnabledCore etc. but it will do for now.
             this.IsEnabled = this.Command == null || this.Command.CanExecute(this.CommandParameter);
+        }
+
+        private void ListenForDefault(IInputElement root)
+        {
+            root.AddHandler(InputElement.KeyDownEvent, this.RootKeyDown);
+        }
+
+        private void StopListeningForDefault(IInputElement root)
+        {
+            root.RemoveHandler(InputElement.KeyDownEvent, this.RootKeyDown);
         }
 
         private void RaiseClickEvent()
@@ -146,6 +252,14 @@ namespace Perspex.Controls
             };
 
             this.RaiseEvent(click);
+        }
+
+        private void RootKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && this.IsVisible && this.IsEnabled)
+            {
+                this.RaiseClickEvent();
+            }
         }
     }
 }

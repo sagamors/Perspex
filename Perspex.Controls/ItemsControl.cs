@@ -8,7 +8,8 @@ namespace Perspex.Controls
 {
     using System;
     using System.Collections;
-    using System.ComponentModel;
+    using System.Collections.ObjectModel;
+    using System.Collections.Specialized;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using Perspex.Collections;
@@ -16,33 +17,56 @@ namespace Perspex.Controls
     using Perspex.Controls.Presenters;
     using Perspex.Controls.Primitives;
     using Perspex.Controls.Templates;
-    using Perspex.VisualTree;
+    using Perspex.Controls.Utils;
+    using Perspex.Styling;
 
-    public class ItemsControl : TemplatedControl, ILogical
+    /// <summary>
+    /// Displays a collection of items.
+    /// </summary>
+    public class ItemsControl : TemplatedControl, IReparentingHost
     {
+        /// <summary>
+        /// The default value for the <see cref="ItemsPanel"/> property.
+        /// </summary>
         [SuppressMessage("Microsoft.StyleCop.CSharp.NamingRules", "SA1202:ElementsMustBeOrderedByAccess", Justification = "Needs to be before or a NullReferenceException is thrown.")]
         private static readonly ItemsPanelTemplate DefaultPanel =
-            new ItemsPanelTemplate(() => new StackPanel { Orientation = Orientation.Vertical });
+            new ItemsPanelTemplate(() => new StackPanel());
 
+        /// <summary>
+        /// Defines the <see cref="Items"/> property.
+        /// </summary>
         public static readonly PerspexProperty<IEnumerable> ItemsProperty =
             PerspexProperty.Register<ItemsControl, IEnumerable>("Items");
 
+        /// <summary>
+        /// Defines the <see cref="ItemsPanel"/> property.
+        /// </summary>
         public static readonly PerspexProperty<ItemsPanelTemplate> ItemsPanelProperty =
             PerspexProperty.Register<ItemsControl, ItemsPanelTemplate>("ItemsPanel", defaultValue: DefaultPanel);
 
-        private ItemContainerGenerator itemContainerGenerator;
+        private IItemContainerGenerator itemContainerGenerator;
 
-        private PerspexReadOnlyListView<IVisual, ILogical> logicalChildren = 
-            new PerspexReadOnlyListView<IVisual, ILogical>(x => (ILogical)x);
-
-        private ItemsPresenter presenter;
-
-        public ItemsControl()
+        /// <summary>
+        /// Initializes static members of the <see cref="ItemsControl"/> class.
+        /// </summary>
+        static ItemsControl()
         {
-            this.GetObservableWithHistory(ItemsProperty).Subscribe(this.ItemsChanged);
+            ItemsProperty.Changed.AddClassHandler<ItemsControl>(x => x.ItemsChanged);
         }
 
-        public ItemContainerGenerator ItemContainerGenerator
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ItemsControl"/> class.
+        /// </summary>
+        public ItemsControl()
+        {
+            this.Classes.Add(":empty");
+            this.Items = new PerspexList<object>();
+        }
+
+        /// <summary>
+        /// Gets the <see cref="IItemContainerGenerator"/> for the control.
+        /// </summary>
+        public IItemContainerGenerator ItemContainerGenerator
         {
             get
             {
@@ -55,52 +79,83 @@ namespace Perspex.Controls
             }
         }
 
+        /// <summary>
+        /// Gets or sets the items to display.
+        /// </summary>
         public IEnumerable Items
         {
             get { return this.GetValue(ItemsProperty); }
             set { this.SetValue(ItemsProperty, value); }
         }
 
+        /// <summary>
+        /// Gets or sets the panel used to display the items.
+        /// </summary>
         public ItemsPanelTemplate ItemsPanel
         {
             get { return this.GetValue(ItemsPanelProperty); }
             set { this.SetValue(ItemsPanelProperty, value); }
         }
 
-        IPerspexReadOnlyList<ILogical> ILogical.LogicalChildren
+        /// <summary>
+        /// Gets the items presenter control.
+        /// </summary>
+        public IItemsPresenter Presenter
         {
-            get
-            {
-                this.ApplyTemplate();
-                return this.logicalChildren;
-            }
+            get;
+            set;
         }
 
-        protected virtual ItemContainerGenerator CreateItemContainerGenerator()
+        /// <inheritdoc/>
+        IPerspexList<ILogical> IReparentingHost.LogicalChildren
+        {
+            get { return this.LogicalChildren; }
+        }
+
+        /// <summary>
+        /// Asks the control whether it wants to reparent the logical children of the specified
+        /// control.
+        /// </summary>
+        /// <param name="control">The control.</param>
+        /// <returns>
+        /// True if the control wants to reparent its logical children otherwise false.
+        /// </returns>
+        bool IReparentingHost.WillReparentChildrenOf(IControl control)
+        {
+            return control is IItemsPresenter && control.TemplatedParent == this;
+        }
+
+        /// <summary>
+        /// Creates the <see cref="ItemContainerGenerator"/> for the control.
+        /// </summary>
+        /// <returns>An <see cref="IItemContainerGenerator"/>.</returns>
+        protected virtual IItemContainerGenerator CreateItemContainerGenerator()
         {
             return new ItemContainerGenerator(this);
         }
 
+        /// <inheritdoc/>
         protected override void OnTemplateApplied()
         {
-            this.presenter = this.FindTemplateChild<ItemsPresenter>("itemsPresenter");
-
-            if (this.presenter != null)
-            {
-                this.logicalChildren.Source = ((IVisual)this.presenter.Panel).VisualChildren;
-            }
+            this.Presenter = this.FindTemplateChild<IItemsPresenter>("itemsPresenter");
         }
 
-        private void ItemsChanged(Tuple<IEnumerable, IEnumerable> value)
+        /// <summary>
+        /// Caled when the <see cref="Items"/> property changes.
+        /// </summary>
+        /// <param name="e">The event args.</param>
+        protected virtual void ItemsChanged(PerspexPropertyChangedEventArgs e)
         {
-            INotifyPropertyChanged inpc = value.Item1 as INotifyPropertyChanged;
+            var incc = e.OldValue as INotifyCollectionChanged;
 
-            if (inpc != null)
+            if (incc != null)
             {
-                inpc.PropertyChanged -= this.ItemsPropertyChanged;
+                incc.CollectionChanged += this.ItemsCollectionChanged;
             }
 
-            if (value.Item2 == null || !value.Item2.OfType<object>().Any())
+            var newValue = e.NewValue as IEnumerable;
+
+            if (newValue == null || newValue.Count() == 0)
             {
                 this.Classes.Add(":empty");
             }
@@ -109,26 +164,31 @@ namespace Perspex.Controls
                 this.Classes.Remove(":empty");
             }
 
-            inpc = value.Item2 as INotifyPropertyChanged;
+            incc = newValue as INotifyCollectionChanged;
 
-            if (inpc != null)
+            if (incc != null)
             {
-                inpc.PropertyChanged += this.ItemsPropertyChanged;
+                incc.CollectionChanged += this.ItemsCollectionChanged;
             }
         }
 
-        private void ItemsPropertyChanged(object sender, PropertyChangedEventArgs e)
+        /// <summary>
+        /// Called when the <see cref="INotifyCollectionChanged.CollectionChanged"/> event is
+        /// raised on <see cref="Items"/>.
+        /// </summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event args.</param>
+        protected virtual void ItemsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            if (e.PropertyName == "Count")
+            var collection = sender as ICollection;
+
+            if (collection.Count == 0)
             {
-                if (((IList)sender).Count == 0)
-                {
-                    this.Classes.Add(":empty");
-                }
-                else
-                {
-                    this.Classes.Remove(":empty");
-                }
+                this.Classes.Add(":empty");
+            }
+            else
+            {
+                this.Classes.Remove(":empty");
             }
         }
     }

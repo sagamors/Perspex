@@ -17,83 +17,198 @@ namespace Perspex
     using Perspex.Platform;
     using Perspex.Rendering;
     using Perspex.VisualTree;
-    using Splat;
+    using Serilog;
+    using Serilog.Core.Enrichers;
 
+    /// <summary>
+    /// Base class for controls that provides rendering and related visual properties.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="Visual"/> class acts as a node in the Perspex scene graph and holds
+    /// all the information needed for an <see cref="IRenderer"/> to render the control.
+    /// To traverse the scene graph (aka Visual Tree), use the extension methods defined
+    /// in <see cref="VisualExtensions"/>.
+    /// </remarks>
     public class Visual : Animatable, IVisual
     {
+        /// <summary>
+        /// Defines the <see cref="Bounds"/> property.
+        /// </summary>
+        public static readonly PerspexProperty<Rect> BoundsProperty =
+            PerspexProperty.Register<Visual, Rect>(nameof(Bounds));
+
+        /// <summary>
+        /// Defines the <see cref="ClipToBounds"/> property.
+        /// </summary>
         public static readonly PerspexProperty<bool> ClipToBoundsProperty =
-            PerspexProperty.Register<Visual, bool>("ClipToBounds");
+            PerspexProperty.Register<Visual, bool>(nameof(ClipToBounds));
 
+        /// <summary>
+        /// Defines the <see cref="IsVisibleProperty"/> property.
+        /// </summary>
         public static readonly PerspexProperty<bool> IsVisibleProperty =
-            PerspexProperty.Register<Visual, bool>("IsVisible", true);
+            PerspexProperty.Register<Visual, bool>(nameof(IsVisible), true);
 
+        /// <summary>
+        /// Defines the <see cref="Opacity"/> property.
+        /// </summary>
         public static readonly PerspexProperty<double> OpacityProperty =
-            PerspexProperty.Register<Visual, double>("Opacity", 1);
+            PerspexProperty.Register<Visual, double>(nameof(Opacity), 1);
 
+        /// <summary>
+        /// Defines the <see cref="RenderTransform"/> property.
+        /// </summary>
         public static readonly PerspexProperty<Transform> RenderTransformProperty =
-            PerspexProperty.Register<Visual, Transform>("RenderTransform");
+            PerspexProperty.Register<Visual, Transform>(nameof(RenderTransform));
 
+        /// <summary>
+        /// Defines the <see cref="TransformOrigin"/> property.
+        /// </summary>
         public static readonly PerspexProperty<Origin> TransformOriginProperty =
-            PerspexProperty.Register<Visual, Origin>("TransformOrigin", defaultValue: Origin.Default);
+            PerspexProperty.Register<Visual, Origin>(nameof(TransformOrigin), defaultValue: Origin.Default);
 
-        private Rect bounds;
+        /// <summary>
+        /// Defines the <see cref="ZIndex"/> property.
+        /// </summary>
+        public static readonly PerspexProperty<int> ZIndexProperty =
+            PerspexProperty.Register<Visual, int>(nameof(ZIndex));
 
+        /// <summary>
+        /// Holds the children of the visual.
+        /// </summary>
         private PerspexList<IVisual> visualChildren;
 
+        /// <summary>
+        /// Holds the parent of the visual.
+        /// </summary>
         private Visual visualParent;
 
+        /// <summary>
+        /// Whether the element is attached to the visual tree.
+        /// </summary>
+        private bool isAttachedToVisualTree;
+
+        /// <summary>
+        /// The logger for visual-level events.
+        /// </summary>
+        private ILogger visualLogger;
+
+        /// <summary>
+        /// Initializes static members of the <see cref="Visual"/> class.
+        /// </summary>
         static Visual()
         {
             AffectsRender(IsVisibleProperty);
+            AffectsRender(OpacityProperty);
             RenderTransformProperty.Changed.Subscribe(RenderTransformChanged);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Visual"/> class.
+        /// </summary>
         public Visual()
         {
+            this.visualLogger = Log.ForContext(new[]
+            {
+                new PropertyEnricher("Area", "Visual"),
+                new PropertyEnricher("SourceContext", this.GetType()),
+                new PropertyEnricher("Id", this.GetHashCode()),
+            });
+
             this.visualChildren = new PerspexList<IVisual>();
             this.visualChildren.CollectionChanged += this.VisualChildrenChanged;
         }
 
+        /// <summary>
+        /// Gets the bounds of the scene graph node.
+        /// </summary>
+        public Rect Bounds
+        {
+            get { return this.GetValue(BoundsProperty); }
+            protected set { this.SetValue(BoundsProperty, value); }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the scene graph node should be clipped to its bounds.
+        /// </summary>
         public bool ClipToBounds
         {
             get { return this.GetValue(ClipToBoundsProperty); }
             set { this.SetValue(ClipToBoundsProperty, value); }
         }
 
+        /// <summary>
+        /// Gets a value indicating whether this scene graph node and all its parents are visible.
+        /// </summary>
+        public bool IsEffectivelyVisible
+        {
+            get { return this.GetSelfAndVisualAncestors().All(x => x.IsVisible); }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this scene graph node is visible.
+        /// </summary>
         public bool IsVisible
         {
             get { return this.GetValue(IsVisibleProperty); }
             set { this.SetValue(IsVisibleProperty, value); }
         }
 
+        /// <summary>
+        /// Gets the opacity of the scene graph node.
+        /// </summary>
         public double Opacity
         {
             get { return this.GetValue(OpacityProperty); }
             set { this.SetValue(OpacityProperty, value); }
         }
 
+        /// <summary>
+        /// Gets the render transform of the scene graph node.
+        /// </summary>
         public Transform RenderTransform
         {
             get { return this.GetValue(RenderTransformProperty); }
             set { this.SetValue(RenderTransformProperty, value); }
         }
 
+        /// <summary>
+        /// Gets the transform origin of the scene graph node.
+        /// </summary>
         public Origin TransformOrigin
         {
             get { return this.GetValue(TransformOriginProperty); }
             set { this.SetValue(TransformOriginProperty, value); }
         }
 
-        Rect IVisual.Bounds
+        /// <summary>
+        /// Gets the Z index of the node.
+        /// </summary>
+        public int ZIndex
         {
-            get { return this.bounds; }
+            get { return this.GetValue(ZIndexProperty); }
+            set { this.SetValue(ZIndexProperty, value); }
         }
 
+        /// <summary>
+        /// Gets a value indicating whether this scene graph node is attached to a visual root.
+        /// </summary>
+        bool IVisual.IsAttachedToVisualTree
+        {
+            get { return this.isAttachedToVisualTree; }
+        }
+
+        /// <summary>
+        /// Gets the scene graph node's child nodes.
+        /// </summary>
         IPerspexReadOnlyList<IVisual> IVisual.VisualChildren
         {
             get { return this.visualChildren; }
         }
 
+        /// <summary>
+        /// Gets the scene graph node's parent node.
+        /// </summary>
         IVisual IVisual.VisualParent
         {
             get
@@ -102,6 +217,9 @@ namespace Perspex
             }
         }
 
+        /// <summary>
+        /// Invalidates the visual and queues a repaint.
+        /// </summary>
         public void InvalidateVisual()
         {
             IRenderRoot root = this.GetSelfAndVisualAncestors()
@@ -114,56 +232,100 @@ namespace Perspex
             }
         }
 
+        /// <summary>
+        /// Renders the visual to a <see cref="IDrawingContext"/>.
+        /// </summary>
+        /// <param name="context">The drawing context.</param>
         public virtual void Render(IDrawingContext context)
         {
             Contract.Requires<ArgumentNullException>(context != null);
         }
 
+        /// <summary>
+        /// Converts a point from control coordinates to screen coordinates.
+        /// </summary>
+        /// <param name="point">The point to convert.</param>
+        /// <returns>The point in screen coordinates.</returns>
         public Point PointToScreen(Point point)
         {
             var p = GetOffsetFromRoot(this);
             return p.Item1.TranslatePointToScreen(point + p.Item2);
         }
 
+        /// <summary>
+        /// Returns a transform that transforms the visual's coordinates into the coordinates
+        /// of the specified <paramref name="visual"/>.
+        /// </summary>
+        /// <param name="visual">The visual to translate the coordinates to.</param>
+        /// <returns>A <see cref="Matrix"/> containing the transform.</returns>
         public Matrix TransformToVisual(IVisual visual)
         {
             var thisOffset = GetOffsetFromRoot(this).Item2;
             var thatOffset = GetOffsetFromRoot(visual).Item2;
-            return Matrix.Translation(-thisOffset) * Matrix.Translation(thatOffset);
+            return Matrix.Translation(-thatOffset) * Matrix.Translation(thisOffset);
         }
 
+        /// <summary>
+        /// Indicates that a property change should cause <see cref="InvalidateVisual"/> to be
+        /// called.
+        /// </summary>
+        /// <param name="property">The property.</param>
+        /// <remarks>
+        /// This method should be called in a control's static constructor for each property
+        /// on the control which when changed should cause a redraw. This is similar to WPF's
+        /// FrameworkPropertyMetadata.AffectsRender flag.
+        /// </remarks>
         protected static void AffectsRender(PerspexProperty property)
         {
             property.Changed.Subscribe(AffectsRenderInvalidate);
         }
 
-        protected void AddVisualChild(Visual visual)
+        /// <summary>
+        /// Adds a visual child to the control.
+        /// </summary>
+        /// <param name="visual">The child to add.</param>
+        protected void AddVisualChild(IVisual visual)
         {
             Contract.Requires<ArgumentNullException>(visual != null);
 
             this.visualChildren.Add(visual);
         }
 
-        protected void AddVisualChildren(IEnumerable<Visual> visuals)
+        /// <summary>
+        /// Adds visual children to the control.
+        /// </summary>
+        /// <param name="visuals">The children to add.</param>
+        protected void AddVisualChildren(IEnumerable<IVisual> visuals)
         {
             Contract.Requires<ArgumentNullException>(visuals != null);
 
             this.visualChildren.AddRange(visuals);
         }
 
+        /// <summary>
+        /// Removes all visual children from the control.
+        /// </summary>
         protected void ClearVisualChildren()
         {
             this.visualChildren.Clear();
         }
 
-        protected void RemoveVisualChild(Visual visual)
+        /// <summary>
+        /// Removes a visual child from the control;
+        /// </summary>
+        /// <param name="visual">The child to remove.</param>
+        protected void RemoveVisualChild(IVisual visual)
         {
             Contract.Requires<ArgumentNullException>(visual != null);
 
             this.visualChildren.Remove(visual);
         }
 
-        protected void RemoveVisualChildren(IEnumerable<Visual> visuals)
+        /// <summary>
+        /// Removes a visual children from the control;
+        /// </summary>
+        /// <param name="visuals">The children to remove.</param>
+        protected void RemoveVisualChildren(IEnumerable<IVisual> visuals)
         {
             Contract.Requires<ArgumentNullException>(visuals != null);
 
@@ -173,23 +335,26 @@ namespace Perspex
             }
         }
 
-        protected void SetVisualBounds(Rect bounds)
-        {
-            this.bounds = bounds;
-        }
-
+        /// <summary>
+        /// Called when the control is added to a visual tree.
+        /// </summary>
+        /// <param name="root">The root of the visual tree.</param>
         protected virtual void OnAttachedToVisualTree(IRenderRoot root)
         {
         }
 
-        protected virtual void OnDetachedFromVisualTree(IRenderRoot oldRoot)
+        /// <summary>
+        /// Called when the control is removed from a visual tree.
+        /// </summary>
+        /// <param name="root">The root of the visual tree.</param>
+        protected virtual void OnDetachedFromVisualTree(IRenderRoot root)
         {
         }
 
-        protected virtual void OnVisualParentChanged(Visual oldParent)
-        {
-        }
-
+        /// <summary>
+        /// Called when a property changes that should invalidate the visual.
+        /// </summary>
+        /// <param name="e">The event args.</param>
         private static void AffectsRenderInvalidate(PerspexPropertyChangedEventArgs e)
         {
             Visual visual = e.Sender as Visual;
@@ -200,6 +365,11 @@ namespace Perspex
             }
         }
 
+        /// <summary>
+        /// Gets the root of the controls visual tree and the distance from the root.
+        /// </summary>
+        /// <param name="v">The visual.</param>
+        /// <returns>A tuple containing the root and the distance from the root</returns>
         private static Tuple<IRenderRoot, Vector> GetOffsetFromRoot(IVisual v)
         {
             var result = new Vector();
@@ -218,6 +388,10 @@ namespace Perspex
             return Tuple.Create((IRenderRoot)v, result);
         }
 
+        /// <summary>
+        /// Called when a visual's <see cref="RenderTransform"/> changes.
+        /// </summary>
+        /// <param name="e">The event args.</param>
         private static void RenderTransformChanged(PerspexPropertyChangedEventArgs e)
         {
             var sender = e.Sender as Visual;
@@ -241,11 +415,21 @@ namespace Perspex
             }
         }
 
+        /// <summary>
+        /// Called when the <see cref="RenderTransform"/>'s <see cref="Transform.Changed"/> event
+        /// is fired.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The event args.</param>
         private void RenderTransformChanged(object sender, EventArgs e)
         {
             this.InvalidateVisual();
         }
 
+        /// <summary>
+        /// Sets the visual parent of the Visual.
+        /// </summary>
+        /// <param name="value">The visual parent.</param>
         private void SetVisualParent(Visual value)
         {
             if (this.visualParent != value)
@@ -260,7 +444,6 @@ namespace Perspex
                 }
 
                 this.visualParent = value;
-                this.OnVisualParentChanged(old);
 
                 if (oldRoot != null)
                 {
@@ -274,6 +457,11 @@ namespace Perspex
             }
         }
 
+        /// <summary>
+        /// Called when the <see cref="visualChildren"/> collection changes.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The event args.</param>
         private void VisualChildrenChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             switch (e.Action)
@@ -298,13 +486,16 @@ namespace Perspex
             }
         }
 
+        /// <summary>
+        /// Calls the <see cref="OnAttachedToVisualTree(IRenderRoot)"/> method for this control
+        /// and all of its visual descendents.
+        /// </summary>
+        /// <param name="root">The root of the visual tree.</param>
         private void NotifyAttachedToVisualTree(IRenderRoot root)
         {
-            this.Log().Debug(
-                "Attached {0} (#{1:x8}) to visual tree",
-                this.GetType().Name,
-                this.GetHashCode());
+            this.visualLogger.Verbose("Attached to visual tree");
 
+            this.isAttachedToVisualTree = true;
             this.OnAttachedToVisualTree(root);
 
             if (this.visualChildren != null)
@@ -316,20 +507,23 @@ namespace Perspex
             }
         }
 
-        private void NotifyDetachedFromVisualTree(IRenderRoot oldRoot)
+        /// <summary>
+        /// Calls the <see cref="OnDetachedFromVisualTree(IRenderRoot)"/> method for this control
+        /// and all of its visual descendents.
+        /// </summary>
+        /// <param name="root">The root of the visual tree.</param>
+        private void NotifyDetachedFromVisualTree(IRenderRoot root)
         {
-            this.Log().Debug(
-                "Detached {0} (#{1:x8}) from visual tree",
-                this.GetType().Name,
-                this.GetHashCode());
+            this.visualLogger.Verbose("Detached from visual tree");
 
-            this.OnDetachedFromVisualTree(oldRoot);
+            this.isAttachedToVisualTree = false;
+            this.OnDetachedFromVisualTree(root);
 
             if (this.visualChildren != null)
             {
                 foreach (Visual child in this.visualChildren.OfType<Visual>())
                 {
-                    child.NotifyDetachedFromVisualTree(oldRoot);
+                    child.NotifyDetachedFromVisualTree(root);
                 }
             }
         }

@@ -6,8 +6,11 @@
 
 namespace Perspex.Direct2D1
 {
+    using System;
+    using System.Linq;
     using SharpDX;
     using SharpDX.Direct2D1;
+    using DWrite = SharpDX.DirectWrite;
 
     public static class PrimitiveExtensions
     {
@@ -35,6 +38,7 @@ namespace Perspex.Direct2D1
         /// Converts a brush to Direct2D.
         /// </summary>
         /// <param name="brush">The brush to convert.</param>
+        /// <param name="target">The render target.</param>
         /// <returns>The Direct2D brush.</returns>
         public static SharpDX.Direct2D1.Brush ToDirect2D(this Perspex.Media.Brush brush, RenderTarget target)
         {
@@ -48,6 +52,29 @@ namespace Perspex.Direct2D1
             {
                 // TODO: Implement other brushes.
                 return new SharpDX.Direct2D1.SolidColorBrush(target, new Color4());
+            }
+        }
+
+        /// <summary>
+        /// Converts a pen to a Direct2D stroke style.
+        /// </summary>
+        /// <param name="pen">The pen to convert.</param>
+        /// <param name="target">The render target.</param>
+        /// <returns>The Direct2D brush.</returns>
+        public static StrokeStyle ToDirect2DStrokeStyle(this Perspex.Media.Pen pen, RenderTarget target)
+        {
+            if (pen.DashArray != null && pen.DashArray.Count > 0)
+            {
+                var properties = new StrokeStyleProperties
+                {
+                    DashStyle = DashStyle.Custom,
+                };
+
+                return new StrokeStyle(target.Factory, properties, pen.DashArray.Select(x => (float)x).ToArray());
+            }
+            else
+            {
+                return null;
             }
         }
 
@@ -84,7 +111,7 @@ namespace Perspex.Direct2D1
         /// <summary>
         /// Converts a Direct2D <see cref="Matrix3x2"/> to a Perspex <see cref="Perspex.Matrix"/>.
         /// </summary>
-        /// <param name="matrix"></param>
+        /// <param name="matrix">The matrix</param>
         /// <returns>a <see cref="Perspex.Matrix"/>.</returns>
         public static Perspex.Matrix ToPerspex(this Matrix3x2 matrix)
         {
@@ -109,6 +136,21 @@ namespace Perspex.Direct2D1
                 (float)rect.Y,
                 (float)rect.Width,
                 (float)rect.Height);
+        }
+
+        public static DWrite.TextAlignment ToDirect2D(this Perspex.Media.TextAlignment alignment)
+        {
+            switch (alignment)
+            {
+                case Perspex.Media.TextAlignment.Left:
+                    return DWrite.TextAlignment.Leading;
+                case Perspex.Media.TextAlignment.Center:
+                    return DWrite.TextAlignment.Center;
+                case Perspex.Media.TextAlignment.Right:
+                    return DWrite.TextAlignment.Trailing;
+                default:
+                    throw new InvalidOperationException("Invalid TextAlignment");
+            }
         }
     }
 }

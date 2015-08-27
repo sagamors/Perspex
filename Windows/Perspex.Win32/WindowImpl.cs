@@ -14,7 +14,6 @@ namespace Perspex.Win32
     using System.Reactive.Disposables;
     using System.Reactive.Linq;
     using System.Runtime.InteropServices;
-    using System.Threading.Tasks;
     using Perspex.Controls;
     using Perspex.Input.Raw;
     using Perspex.Platform;
@@ -215,7 +214,7 @@ namespace Perspex.Win32
             {
                 case UnmanagedMethods.WindowsMessage.WM_ACTIVATE:
                     var wa = (UnmanagedMethods.WindowActivate)((int)wParam & 0xffff);
-                    
+
                     switch (wa)
                     {
                         case UnmanagedMethods.WindowActivate.WA_ACTIVE:
@@ -247,11 +246,23 @@ namespace Perspex.Win32
                     return IntPtr.Zero;
 
                 case UnmanagedMethods.WindowsMessage.WM_KEYDOWN:
+                case UnmanagedMethods.WindowsMessage.WM_SYSKEYDOWN:
                     WindowsKeyboardDevice.Instance.UpdateKeyStates();
                     e = new RawKeyEventArgs(
                             WindowsKeyboardDevice.Instance,
                             timestamp,
                             RawKeyEventType.KeyDown,
+                            KeyInterop.KeyFromVirtualKey((int)wParam),
+                            WindowsKeyboardDevice.Instance.StringFromVirtualKey((uint)wParam));
+                    break;
+
+                case UnmanagedMethods.WindowsMessage.WM_KEYUP:
+                case UnmanagedMethods.WindowsMessage.WM_SYSKEYUP:
+                    WindowsKeyboardDevice.Instance.UpdateKeyStates();
+                    e = new RawKeyEventArgs(
+                            WindowsKeyboardDevice.Instance,
+                            timestamp,
+                            RawKeyEventType.KeyUp,
                             KeyInterop.KeyFromVirtualKey((int)wParam),
                             WindowsKeyboardDevice.Instance.StringFromVirtualKey((uint)wParam));
                     break;

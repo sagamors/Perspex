@@ -6,7 +6,9 @@
 
 namespace Perspex.Platform
 {
-    public interface IRenderTargetBitmapImpl : IBitmapImpl
+    using System;
+
+    public interface IRenderTargetBitmapImpl : IBitmapImpl, IDisposable
     {
         void Render(IVisual visual);
     }

@@ -6,13 +6,12 @@
 
 namespace Perspex.Themes.Default
 {
-    using System;
     using System.Linq;
     using Perspex.Controls;
-    using Perspex.Media;
-    using Perspex.Controls.Shapes;
-    using Perspex.Styling;
     using Perspex.Controls.Presenters;
+    using Perspex.Controls.Templates;
+    using Perspex.Media;
+    using Perspex.Styling;
 
     public class TextBoxStyle : Styles
     {
@@ -24,12 +23,13 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(TextBox.TemplateProperty, ControlTemplate.Create<TextBox>(this.Template)),
+                        new Setter(TextBox.TemplateProperty, new ControlTemplate<TextBox>(this.Template)),
                         new Setter(TextBox.BorderBrushProperty, new SolidColorBrush(0xff707070)),
                         new Setter(TextBox.BorderThicknessProperty, 2.0),
+                        new Setter(TextBox.FocusAdornerProperty, null),
                     },
                 },
-                new Style(x => x.OfType<TextBox>().Class(":focus").Template().Id("border"))
+                new Style(x => x.OfType<TextBox>().Class(":focus").Template().Name("border"))
                 {
                     Setters = new[]
                     {
@@ -43,25 +43,23 @@ namespace Perspex.Themes.Default
         {
             Border result = new Border
             {
-                Id = "border",
+                Name = "border",
                 Padding = new Thickness(2),
                 [~Border.BackgroundProperty] = control[~TextBox.BackgroundProperty],
                 [~Border.BorderBrushProperty] = control[~TextBox.BorderBrushProperty],
                 [~Border.BorderThicknessProperty] = control[~TextBox.BorderThicknessProperty],
-                Content = new ScrollViewer
+                Child = new ScrollViewer
                 {
                     [~ScrollViewer.CanScrollHorizontallyProperty] = control[~ScrollViewer.CanScrollHorizontallyProperty],
                     [~ScrollViewer.HorizontalScrollBarVisibilityProperty] = control[~ScrollViewer.HorizontalScrollBarVisibilityProperty],
                     [~ScrollViewer.VerticalScrollBarVisibilityProperty] = control[~ScrollViewer.VerticalScrollBarVisibilityProperty],
                     Content = new TextPresenter
                     {
-                        Id = "textPresenter",
-                        [~TextPresenter.AcceptsReturnProperty] = control[~TextBox.AcceptsReturnProperty],
-                        [~TextPresenter.AcceptsTabProperty] = control[~TextBox.AcceptsTabProperty],
+                        Name = "textPresenter",
                         [~TextPresenter.CaretIndexProperty] = control[~TextBox.CaretIndexProperty],
                         [~TextPresenter.SelectionStartProperty] = control[~TextBox.SelectionStartProperty],
                         [~TextPresenter.SelectionEndProperty] = control[~TextBox.SelectionEndProperty],
-                        [~~TextPresenter.TextProperty] = control[~~TextBox.TextProperty],
+                        [~TextPresenter.TextProperty] = control[~TextBox.TextProperty],
                         [~TextPresenter.TextWrappingProperty] = control[~TextBox.TextWrappingProperty],
                     }
                 }

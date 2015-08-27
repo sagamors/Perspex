@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-// <copyright file="SubscribeCheck.cs" company="Steven Kirk">
+// <copyright file="TestSelectors.cs" company="Steven Kirk">
 // Copyright 2014 MIT Licence. See licence.md for more information.
 // </copyright>
 // -----------------------------------------------------------------------
@@ -12,10 +12,10 @@ namespace Perspex.Styling.UnitTests
     {
         public static Selector SubscribeCheck(this Selector selector)
         {
-            return new Selector(selector)
-            {
-                GetObservable = control => ((TestControlBase)control).SubscribeCheckObservable,
-            };
+            return new Selector(
+                selector,
+                control => new SelectorMatch(((TestControlBase)control).SubscribeCheckObservable),
+                "");
         }
     }
 }

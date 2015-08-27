@@ -8,6 +8,7 @@ namespace Perspex.Media
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Text;
 
@@ -173,7 +174,7 @@ namespace Perspex.Media
 
                 if (!Commands.TryGetValue(c, out command))
                 {
-                    if ((char.IsDigit(c) || c == '.' || c == '+' || c == '-') && 
+                    if ((char.IsDigit(c) || c == '.' || c == '+' || c == '-') &&
                         (lastCommand != Command.None))
                     {
                         return lastCommand;
@@ -197,7 +198,7 @@ namespace Perspex.Media
             bool readPoint = false;
             bool readExponent = false;
             int i;
-            
+
             while ((i = reader.Peek()) != -1)
             {
                 char c = char.ToUpperInvariant((char)i);
@@ -224,7 +225,7 @@ namespace Perspex.Media
                 }
             }
 
-            return double.Parse(b.ToString());
+            return double.Parse(b.ToString(), CultureInfo.InvariantCulture);
         }
 
         private static Point ReadPoint(StringReader reader)

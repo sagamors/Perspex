@@ -6,59 +6,80 @@
 
 namespace Perspex.Controls
 {
-    using System;
-    using System.Linq;
-    using System.Reactive.Linq;
-    using Perspex.Collections;
-    using Perspex.Controls.Generators;
+    using Perspex.Animation;
     using Perspex.Controls.Presenters;
     using Perspex.Controls.Primitives;
-    using Perspex.Controls.Templates;
 
-    public class TabControl : SelectingItemsControl, ILogical
+    /// <summary>
+    /// A tab control that displays a tab strip along with the content of the selected tab.
+    /// </summary>
+    public class TabControl : SelectingItemsControl, IReparentingHost
     {
-        public static readonly PerspexProperty<object> SelectedContentProperty =
-            PerspexProperty.Register<TabControl, object>("SelectedContent");
-
+        /// <summary>
+        /// Defines the <see cref="SelectedTab"/> property.
+        /// </summary>
         public static readonly PerspexProperty<TabItem> SelectedTabProperty =
             PerspexProperty.Register<TabControl, TabItem>("SelectedTab");
 
-        private PerspexReadOnlyListView<ILogical> logicalChildren = 
-            new PerspexReadOnlyListView<ILogical>();
+        /// <summary>
+        /// Defines the <see cref="Transition"/> property.
+        /// </summary>
+        public static readonly PerspexProperty<IPageTransition> TransitionProperty =
+            Deck.TransitionProperty.AddOwner<TabControl>();
 
-        public TabControl()
+        /// <summary>
+        /// Initializes static members of the <see cref="TabControl"/> class.
+        /// </summary>
+        static TabControl()
         {
-            this.GetObservable(SelectedItemProperty).Subscribe(x =>
-            {
-                ContentControl c = x as ContentControl;
-                object content = (c != null) ? c.Content : c;
-                this.SetValue(SelectedContentProperty, content);
-            });
-
-            this.BindTwoWay(SelectedTabProperty, this, SelectingItemsControl.SelectedItemProperty);
+            AutoSelectProperty.OverrideDefaultValue<TabControl>(true);
+            FocusableProperty.OverrideDefaultValue<TabControl>(false);
+            SelectedIndexProperty.Changed.AddClassHandler<TabControl>(x => x.SelectedIndexChanged);
         }
 
-        public object SelectedContent
-        {
-            get { return this.GetValue(SelectedContentProperty); }
-            set { this.SetValue(SelectedContentProperty, value); }
-        }
-
+        /// <summary>
+        /// Gets the <see cref="SelectingItemsControl.SelectedItem"/> as a <see cref="TabItem"/>.
+        /// </summary>
         public TabItem SelectedTab
         {
             get { return this.GetValue(SelectedTabProperty); }
-            set { this.SetValue(SelectedTabProperty, value); }
+            private set { this.SetValue(SelectedTabProperty, value); }
         }
 
-        IPerspexReadOnlyList<ILogical> ILogical.LogicalChildren
+        /// <summary>
+        /// Gets or sets the transition to use when switching tabs.
+        /// </summary>
+        public IPageTransition Transition
         {
-            get { return this.logicalChildren; }
+            get { return this.GetValue(TransitionProperty); }
+            set { this.SetValue(TransitionProperty, value); }
         }
 
-        protected override void OnTemplateApplied()
+        /// <summary>
+        /// Asks the control whether it wants to reparent the logical children of the specified
+        /// control.
+        /// </summary>
+        /// <param name="control">The control.</param>
+        /// <returns>
+        /// True if the control wants to reparent its logical children otherwise false.
+        /// </returns>
+        bool IReparentingHost.WillReparentChildrenOf(IControl control)
         {
-            var presenter = this.GetTemplateChild<ContentPresenter>("contentPresenter");
-            this.logicalChildren.Source = ((ILogical)presenter).LogicalChildren;
+            return control is DeckPresenter;
+        }
+
+        /// <summary>
+        /// Called when the <see cref="SelectingItemsControl.SelectedIndex"/> property changes.
+        /// </summary>
+        /// <param name="e">The event args.</param>
+        private void SelectedIndexChanged(PerspexPropertyChangedEventArgs e)
+        {
+            if ((int)e.NewValue != -1)
+            {
+                var item = this.SelectedItem as IContentControl;
+                var content = item?.Content ?? item;
+                this.SelectedTab = item as TabItem;
+            }
         }
     }
 }

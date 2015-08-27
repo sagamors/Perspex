@@ -8,9 +8,12 @@ namespace Perspex.Layout
 {
     using System;
     using System.Reactive;
+    using System.Reactive.Disposables;
     using System.Reactive.Subjects;
     using NGenerics.DataStructures.General;
     using Perspex.VisualTree;
+    using Serilog;
+    using Serilog.Core.Enrichers;
 
     /// <summary>
     /// Manages measuring and arranging of controls.
@@ -18,7 +21,7 @@ namespace Perspex.Layout
     /// <remarks>
     /// Each layout root element such as a window has its own LayoutManager that is responsible
     /// for laying out its child controls. When a layout is required the <see cref="LayoutNeeded"/>
-    /// observable will fire and the root element should respond by calling 
+    /// observable will fire and the root element should respond by calling
     /// <see cref="ExecuteLayoutPass"/> at the earliest opportunity to carry out the layout.
     /// </remarks>
     public class LayoutManager : ILayoutManager
@@ -32,6 +35,11 @@ namespace Perspex.Layout
         /// Called when a layout is needed.
         /// </summary>
         private Subject<Unit> layoutNeeded;
+
+        /// <summary>
+        /// Called when a layout is completed.
+        /// </summary>
+        private Subject<Unit> layoutCompleted;
 
         /// <summary>
         /// Whether a measure is needed on the next layout pass.
@@ -49,11 +57,29 @@ namespace Perspex.Layout
         private Heap<Item> toArrange = new Heap<Item>(HeapType.Minimum);
 
         /// <summary>
+        /// Prevents re-entrancy.
+        /// </summary>
+        private bool running;
+
+        /// <summary>
+        /// The logger to use.
+        /// </summary>
+        private ILogger log;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="LayoutManager"/> class.
         /// </summary>
         public LayoutManager()
         {
+            this.log = Log.ForContext(new[]
+            {
+                new PropertyEnricher("Area", "Layout"),
+                new PropertyEnricher("SourceContext", this.GetType()),
+                new PropertyEnricher("Id", this.GetHashCode()),
+            });
+
             this.layoutNeeded = new Subject<Unit>();
+            this.layoutCompleted = new Subject<Unit>();
         }
 
         /// <summary>
@@ -71,16 +97,18 @@ namespace Perspex.Layout
         /// <summary>
         /// Gets an observable that is fired when a layout pass is needed.
         /// </summary>
-        public IObservable<Unit> LayoutNeeded
-        {
-            get { return this.layoutNeeded; }
-        }
+        public IObservable<Unit> LayoutNeeded => this.layoutNeeded;
+
+        /// <summary>
+        /// Gets an observable that is fired when a layout pass is completed.
+        /// </summary>
+        public IObservable<Unit> LayoutCompleted => this.layoutCompleted;
 
         /// <summary>
         /// Gets a value indicating whether a layout is queued.
         /// </summary>
         /// <remarks>
-        /// Returns true when <see cref="LayoutNeeded"/> has been fired, but 
+        /// Returns true when <see cref="LayoutNeeded"/> has been fired, but
         /// <see cref="ExecuteLayoutPass"/> has not yet been called.
         /// </remarks>
         public bool LayoutQueued
@@ -94,22 +122,44 @@ namespace Perspex.Layout
         /// </summary>
         public void ExecuteLayoutPass()
         {
-            this.LayoutQueued = false;
-
-            for (int i = 0; i < MaxTries; ++i)
+            if (this.running)
             {
-                if (this.measureNeeded)
+                return;
+            }
+
+            using (Disposable.Create(() => this.running = false))
+            {
+                this.running = true;
+                this.LayoutQueued = false;
+
+                this.log.Information(
+                    "Started layout pass. To measure: {Measure} To arrange: {Arrange}",
+                    this.toMeasure.Count,
+                    this.toArrange.Count);
+
+                var stopwatch = new System.Diagnostics.Stopwatch();
+                stopwatch.Start();
+
+                for (int i = 0; i < MaxTries; ++i)
                 {
-                    this.ExecuteMeasure();
-                    this.measureNeeded = false;
+                    if (this.measureNeeded)
+                    {
+                        this.ExecuteMeasure();
+                        this.measureNeeded = false;
+                    }
+
+                    this.ExecuteArrange();
+
+                    if (this.toMeasure.Count == 0)
+                    {
+                        break;
+                    }
                 }
 
-                this.ExecuteArrange();
+                stopwatch.Stop();
+                this.log.Information("Layout pass finised in {Time}", stopwatch.Elapsed);
 
-                if (this.toMeasure.Count == 0)
-                {
-                    break;
-                }
+                this.layoutCompleted.OnNext(Unit.Default);
             }
         }
 
@@ -183,7 +233,10 @@ namespace Perspex.Layout
                                 parent = parent.GetVisualParent<ILayoutable>();
                             }
 
-                            parent.Measure(parent.PreviousMeasure.Value, true);
+                            if (parent.GetVisualRoot() == this.Root)
+                            {
+                                parent.Measure(parent.PreviousMeasure.Value, true);
+                            }
                         }
                     }
                 }
@@ -208,7 +261,7 @@ namespace Perspex.Layout
 
                 if (!this.Root.IsArrangeValid && this.Root.IsMeasureValid)
                 {
-                    this.Root.Arrange(new Rect(this.Root.DesiredSize.Value));
+                    this.Root.Arrange(new Rect(this.Root.DesiredSize));
                 }
 
                 if (this.toMeasure.Count > 0)
@@ -229,7 +282,10 @@ namespace Perspex.Layout
                                 control = control.GetVisualParent<ILayoutable>();
                             }
 
-                            control.Arrange(control.PreviousArrange.Value, true);
+                            if (control.GetVisualRoot() == this.Root)
+                            {
+                                control.Arrange(control.PreviousArrange.Value, true);
+                            }
 
                             if (this.toMeasure.Count > 0)
                             {

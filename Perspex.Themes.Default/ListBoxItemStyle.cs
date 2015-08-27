@@ -8,12 +8,10 @@ namespace Perspex.Themes.Default
 {
     using System.Linq;
     using Perspex.Controls;
-    using Perspex.Layout;
-    using Perspex.Media;
-    using Perspex.Controls.Shapes;
-    using Perspex.Styling;
     using Perspex.Controls.Presenters;
-    using Perspex.Controls.Primitives;
+    using Perspex.Controls.Templates;
+    using Perspex.Media;
+    using Perspex.Styling;
 
     public class ListBoxItemStyle : Styles
     {
@@ -25,10 +23,17 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(ListBoxItem.TemplateProperty, ControlTemplate.Create<ListBoxItem>(this.Template)),
+                        new Setter(ListBoxItem.TemplateProperty, new ControlTemplate<ListBoxItem>(this.Template)),
                     },
                 },
-                new Style(x => x.OfType<ListBoxItem>().Class(":selected").Template().Id("border"))
+                new Style(x => x.OfType<ListBoxItem>().Class("selected").Template().Name("border"))
+                {
+                    Setters = new[]
+                    {
+                        new Setter(ListBoxItem.BackgroundProperty, new SolidColorBrush(0xfff0f0f0)),
+                    },
+                },
+                new Style(x => x.OfType<ListBoxItem>().Class("selected").Class(":focus").Template().Name("border"))
                 {
                     Setters = new[]
                     {
@@ -43,11 +48,11 @@ namespace Perspex.Themes.Default
         {
             return new Border
             {
-                Id = "border",
+                Name = "border",
                 [~Border.BackgroundProperty] = control[~ListBoxItem.BackgroundProperty],
                 [~Border.BorderBrushProperty] = control[~ListBoxItem.BorderBrushProperty],
                 [~Border.BorderThicknessProperty] = control[~ListBoxItem.BorderThicknessProperty],
-                Content = new ContentPresenter
+                Child = new ContentPresenter
                 {
                     [~ContentPresenter.ContentProperty] = control[~ListBoxItem.ContentProperty],
                 },

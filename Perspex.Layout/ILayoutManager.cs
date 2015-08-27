@@ -15,7 +15,7 @@ namespace Perspex.Layout
     /// <remarks>
     /// Each layout root element such as a window has its own LayoutManager that is responsible
     /// for laying out its child controls. When a layout is required the <see cref="LayoutNeeded"/>
-    /// observable will fire and the root element should respond by calling 
+    /// observable will fire and the root element should respond by calling
     /// <see cref="ExecuteLayoutPass"/> at the earliest opportunity to carry out the layout.
     /// </remarks>
     public interface ILayoutManager
@@ -34,10 +34,15 @@ namespace Perspex.Layout
         IObservable<Unit> LayoutNeeded { get; }
 
         /// <summary>
+        /// Gets an observable that is fired when a layout pass is completed.
+        /// </summary>
+        IObservable<Unit> LayoutCompleted { get; }
+
+        /// <summary>
         /// Gets a value indicating whether a layout is queued.
         /// </summary>
         /// <remarks>
-        /// Returns true when <see cref="LayoutNeeded"/> has been fired, but 
+        /// Returns true when <see cref="LayoutNeeded"/> has been fired, but
         /// <see cref="ExecuteLayoutPass"/> has not yet been called.
         /// </remarks>
         bool LayoutQueued { get; }

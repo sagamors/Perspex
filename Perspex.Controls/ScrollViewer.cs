@@ -17,7 +17,7 @@ namespace Perspex.Controls
             PerspexProperty.Register<ScrollViewer, Size>("Extent");
 
         public static readonly PerspexProperty<Vector> OffsetProperty =
-            PerspexProperty.Register<ScrollViewer, Vector>("Offset", coerce: CoerceOffset);
+            PerspexProperty.Register<ScrollViewer, Vector>("Offset", validate: ValidateOffset);
 
         public static readonly PerspexProperty<Size> ViewportProperty =
             PerspexProperty.Register<ScrollViewer, Size>("Viewport");
@@ -41,7 +41,7 @@ namespace Perspex.Controls
             PerspexProperty.Register<ScrollViewer, double>("VerticalScrollBarViewportSize");
 
         public static readonly PerspexProperty<bool> CanScrollHorizontallyProperty =
-            PerspexProperty.RegisterAttached<ScrollViewer, Control, bool>("CanScrollHorizontally", false);
+            PerspexProperty.RegisterAttached<ScrollViewer, Control, bool>("CanScrollHorizontally", true);
 
         public static readonly PerspexProperty<ScrollBarVisibility> HorizontalScrollBarVisibilityProperty =
             PerspexProperty.RegisterAttached<ScrollBar, Control, ScrollBarVisibility>("HorizontalScrollBarVisibility", ScrollBarVisibility.Auto);
@@ -51,8 +51,8 @@ namespace Perspex.Controls
 
         static ScrollViewer()
         {
-            PerspexObject.AffectsCoercion(ExtentProperty, OffsetProperty);
-            PerspexObject.AffectsCoercion(ViewportProperty, OffsetProperty);
+            PerspexObject.AffectsValidation(ExtentProperty, OffsetProperty);
+            PerspexObject.AffectsValidation(ViewportProperty, OffsetProperty);
         }
 
         public ScrollViewer()
@@ -143,7 +143,7 @@ namespace Perspex.Controls
             return double.IsNaN(result) ? 0 : Math.Round(result);
         }
 
-        private static Vector CoerceOffset(PerspexObject o, Vector value)
+        private static Vector ValidateOffset(PerspexObject o, Vector value)
         {
             ScrollViewer scrollViewer = o as ScrollViewer;
 

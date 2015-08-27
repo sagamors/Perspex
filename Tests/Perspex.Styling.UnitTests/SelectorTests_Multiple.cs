@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-// <copyright file="SelectorTests.cs" company="Steven Kirk">
+// <copyright file="SelectorTests_Multiple.cs" company="Steven Kirk">
 // Copyright 2014 MIT Licence. See licence.md for more information.
 // </copyright>
 // -----------------------------------------------------------------------
@@ -10,6 +10,7 @@ namespace Perspex.Styling.UnitTests
     using System.Collections.Generic;
     using System.Linq;
     using Perspex.Controls;
+    using Perspex.Controls.Templates;
     using Perspex.Styling;
     using Xunit;
 
@@ -22,7 +23,7 @@ namespace Perspex.Styling.UnitTests
             {
                 return new Border
                 {
-                    Id = "border",
+                    Name = "border",
                 };
             });
 
@@ -38,11 +39,11 @@ namespace Perspex.Styling.UnitTests
                 .Class("foo")
                 .Class("bar")
                 .Template()
-                .Id("border");
+                .Name("border");
 
             var border = (Border)((IVisual)control).VisualChildren.Single();
             var values = new List<bool>();
-            var activator = selector.GetActivator(border);
+            var activator = selector.Match(border).ObservableResult;
 
             activator.Subscribe(x => values.Add(x));
 

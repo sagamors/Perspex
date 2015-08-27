@@ -6,14 +6,14 @@
 
 namespace Perspex.Themes.Default
 {
-    using System;
     using System.Linq;
     using Perspex.Controls;
+    using Perspex.Controls.Presenters;
+    using Perspex.Controls.Shapes;
+    using Perspex.Controls.Templates;
     using Perspex.Layout;
     using Perspex.Media;
-    using Perspex.Controls.Shapes;
     using Perspex.Styling;
-    using Perspex.Controls.Presenters;
 
     public class RadioButtonStyle : Styles
     {
@@ -25,17 +25,17 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(Button.TemplateProperty, ControlTemplate.Create<RadioButton>(this.Template)),
+                        new Setter(Button.TemplateProperty,  new ControlTemplate<RadioButton>(this.Template)),
                     },
                 },
-                new Style(x => x.OfType<RadioButton>().Template().Id("checkMark"))
+                new Style(x => x.OfType<RadioButton>().Template().Name("checkMark"))
                 {
                     Setters = new[]
                     {
                         new Setter(Shape.IsVisibleProperty, false),
                     },
                 },
-                new Style(x => x.OfType<RadioButton>().Class(":checked").Template().Id("checkMark"))
+                new Style(x => x.OfType<RadioButton>().Class(":checked").Template().Name("checkMark"))
                 {
                     Setters = new[]
                     {
@@ -50,7 +50,7 @@ namespace Perspex.Themes.Default
             Border result = new Border
             {
                 [~Border.BackgroundProperty] = control[~RadioButton.BackgroundProperty],
-                Content = new Grid
+                Child = new Grid
                 {
                     ColumnDefinitions = new ColumnDefinitions
                     {
@@ -61,7 +61,7 @@ namespace Perspex.Themes.Default
                     {
                         new Ellipse
                         {
-                            Id = "checkBorder",
+                            Name = "checkBorder",
                             Stroke = Brushes.Black,
                             StrokeThickness = 2,
                             Width = 18,
@@ -71,7 +71,7 @@ namespace Perspex.Themes.Default
                         },
                         new Ellipse
                         {
-                            Id = "checkMark",
+                            Name = "checkMark",
                             Fill = Brushes.Black,
                             Width = 10,
                             Height = 10,
@@ -82,7 +82,7 @@ namespace Perspex.Themes.Default
                         },
                         new ContentPresenter
                         {
-                            Id = "contentPresenter",
+                            Name = "contentPresenter",
                             Margin = new Thickness(4, 0, 0, 0),
                             VerticalAlignment = VerticalAlignment.Center,
                             [~ContentPresenter.ContentProperty] = control[~RadioButton.ContentProperty],

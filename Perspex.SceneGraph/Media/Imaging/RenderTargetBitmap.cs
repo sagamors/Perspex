@@ -6,10 +6,11 @@
 
 namespace Perspex.Media.Imaging
 {
+    using System;
     using Perspex.Platform;
     using Splat;
 
-    public class RenderTargetBitmap : Bitmap
+    public class RenderTargetBitmap : Bitmap, IDisposable
     {
         public RenderTargetBitmap(int width, int height)
             : base(CreateImpl(width, height))
@@ -24,6 +25,11 @@ namespace Perspex.Media.Imaging
         public void Render(IVisual visual)
         {
             this.PlatformImpl.Render(visual);
+        }
+
+        public void Dispose()
+        {
+            this.PlatformImpl.Dispose();
         }
 
         private static IBitmapImpl CreateImpl(int width, int height)

@@ -11,9 +11,9 @@ namespace Perspex.Controls
 
     public class ListBox : SelectingItemsControl
     {
-        protected override ItemContainerGenerator CreateItemContainerGenerator()
+        protected override IItemContainerGenerator CreateItemContainerGenerator()
         {
-            return new TypedItemContainerGenerator<ListBoxItem>(this);
+            return new ItemContainerGenerator<ListBoxItem>(this);
         }
     }
 }

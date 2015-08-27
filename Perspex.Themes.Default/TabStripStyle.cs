@@ -10,6 +10,7 @@ namespace Perspex.Themes.Default
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
     using Perspex.Controls.Primitives;
+    using Perspex.Controls.Templates;
     using Perspex.Styling;
 
     public class TabStripStyle : Styles
@@ -22,10 +23,10 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(TabStrip.TemplateProperty, ControlTemplate.Create<TabStrip>(this.Template)),
+                        new Setter(TabStrip.TemplateProperty, new ControlTemplate<TabStrip>(this.Template)),
                     },
                 },
-                new Style(x => x.OfType<TabStrip>().Template().OfType<ItemsPresenter>().Template().OfType<StackPanel>())
+                new Style(x => x.OfType<TabStrip>().Template().OfType<StackPanel>())
                 {
                     Setters = new[]
                     {
@@ -40,7 +41,7 @@ namespace Perspex.Themes.Default
         {
             return new ItemsPresenter
             {
-                Id = "itemsPresenter",
+                Name = "itemsPresenter",
                 [~ItemsPresenter.ItemsProperty] = control[~ItemsControl.ItemsProperty],
                 [~ItemsPresenter.ItemsPanelProperty] = control[~ItemsControl.ItemsPanelProperty],
             };

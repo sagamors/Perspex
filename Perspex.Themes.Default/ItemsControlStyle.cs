@@ -9,6 +9,7 @@ namespace Perspex.Themes.Default
     using System.Linq;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
+    using Perspex.Controls.Templates;
     using Perspex.Styling;
 
     public class ItemsControlStyle : Styles
@@ -21,7 +22,7 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(Button.TemplateProperty, ControlTemplate.Create<ItemsControl>(this.Template)),
+                        new Setter(Button.TemplateProperty, new ControlTemplate<ItemsControl>(this.Template)),
                     },
                 },
             });
@@ -31,7 +32,7 @@ namespace Perspex.Themes.Default
         {
             return new ItemsPresenter
             {
-                Id = "itemsPresenter",
+                Name = "itemsPresenter",
                 [~ItemsPresenter.ItemsProperty] = control[~ItemsControl.ItemsProperty],
                 [~ItemsPresenter.ItemsPanelProperty] = control[~ItemsControl.ItemsPanelProperty],
             };

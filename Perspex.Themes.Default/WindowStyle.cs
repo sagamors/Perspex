@@ -9,7 +9,8 @@ namespace Perspex.Themes.Default
     using System.Linq;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
-    using Perspex.Media;
+    using Perspex.Controls.Primitives;
+    using Perspex.Controls.Templates;
     using Perspex.Styling;
 
     public class WindowStyle : Styles
@@ -22,7 +23,7 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(Window.TemplateProperty, ControlTemplate.Create<Window>(this.Template)),
+                        new Setter(Window.TemplateProperty, new ControlTemplate<Window>(this.Template)),
                         new Setter(Window.FontFamilyProperty, "Segoe UI"),
                         new Setter(Window.FontSizeProperty, 12.0),
                     },
@@ -35,10 +36,13 @@ namespace Perspex.Themes.Default
             return new Border
             {
                 [~Border.BackgroundProperty] = control[~Window.BackgroundProperty],
-                Content = new ContentPresenter
+                Child = new AdornerDecorator
                 {
-                    Id = "contentPresenter",
-                    [~ContentPresenter.ContentProperty] = control[~Window.ContentProperty],
+                    Child = new ContentPresenter
+                    {
+                        Name = "contentPresenter",
+                        [~ContentPresenter.ContentProperty] = control[~Window.ContentProperty],
+                    }
                 }
             };
         }

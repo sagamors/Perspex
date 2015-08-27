@@ -10,6 +10,7 @@ namespace Perspex.Themes.Default
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
     using Perspex.Controls.Primitives;
+    using Perspex.Controls.Templates;
     using Perspex.Media;
     using Perspex.Styling;
 
@@ -23,33 +24,33 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(ScrollBar.TemplateProperty, ControlTemplate.Create<ScrollBar>(this.Template)),
+                        new Setter(ScrollBar.TemplateProperty, new ControlTemplate<ScrollBar>(this.Template)),
                     },
                 },
-                new Style(x => x.OfType<ScrollBar>().Class(":horizontal"))
+                new Style(x => x.OfType<ScrollBar>().PropertyEquals(ScrollBar.OrientationProperty, Orientation.Horizontal))
                 {
                     Setters = new[]
                     {
-                        new Setter(ScrollBar.TemplateProperty, ControlTemplate.Create<ScrollBar>(this.Template)),
+                        new Setter(ScrollBar.TemplateProperty, new ControlTemplate<ScrollBar>(this.Template)),
                         new Setter(ScrollBar.HeightProperty, 10.0),
                     },
                 },
-                new Style(x => x.OfType<ScrollBar>().Class(":horizontal").Template().Id("thumb"))
+                new Style(x => x.OfType<ScrollBar>().PropertyEquals(ScrollBar.OrientationProperty, Orientation.Horizontal).Template().Name("thumb"))
                 {
                     Setters = new[]
                     {
                         new Setter(Thumb.MinWidthProperty, 10.0),
                     },
                 },
-                new Style(x => x.OfType<ScrollBar>().Class(":vertical"))
+                new Style(x => x.OfType<ScrollBar>().PropertyEquals(ScrollBar.OrientationProperty, Orientation.Vertical))
                 {
                     Setters = new[]
                     {
-                        new Setter(ScrollBar.TemplateProperty, ControlTemplate.Create<ScrollBar>(this.Template)),
+                        new Setter(ScrollBar.TemplateProperty, new ControlTemplate<ScrollBar>(this.Template)),
                         new Setter(ScrollBar.WidthProperty, 10.0),
                     },
                 },
-                new Style(x => x.OfType<ScrollBar>().Class(":vertical").Template().Id("thumb"))
+                new Style(x => x.OfType<ScrollBar>().PropertyEquals(ScrollBar.OrientationProperty, Orientation.Vertical).Template().Name("thumb"))
                 {
                     Setters = new[]
                     {
@@ -64,17 +65,18 @@ namespace Perspex.Themes.Default
             return new Border
             {
                 Background = Brushes.Silver,
-                Content = new Track
+                Child = new Track
                 {
-                    [~Track.MinimumProperty] = control[~ScrollBar.MinimumProperty],
-                    [~Track.MaximumProperty] = control[~ScrollBar.MaximumProperty],
-                    [~~Track.ValueProperty] = control[~ScrollBar.ValueProperty],
-                    [~Track.ViewportSizeProperty] = control[~ScrollBar.ViewportSizeProperty],
-                    [~Track.OrientationProperty] = control[~ScrollBar.OrientationProperty],
+                    Name = "track",
+                    [!Track.MinimumProperty] = control[!ScrollBar.MinimumProperty],
+                    [!Track.MaximumProperty] = control[!ScrollBar.MaximumProperty],
+                    [!!Track.ValueProperty] = control[!!ScrollBar.ValueProperty],
+                    [!Track.ViewportSizeProperty] = control[!ScrollBar.ViewportSizeProperty],
+                    [!Track.OrientationProperty] = control[!ScrollBar.OrientationProperty],
                     Thumb = new Thumb
                     {
-                        Id = "thumb",
-                        Template = ControlTemplate.Create<Thumb>(this.ThumbTemplate),
+                        Name = "thumb",
+                        Template = new ControlTemplate<Thumb>(this.ThumbTemplate),
                     },
                 },
             };

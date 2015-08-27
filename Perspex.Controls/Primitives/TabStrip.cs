@@ -16,17 +16,16 @@ namespace Perspex.Controls.Primitives
         public static readonly PerspexProperty<TabItem> SelectedTabProperty =
             TabControl.SelectedTabProperty.AddOwner<TabStrip>();
 
-        private static readonly ItemsPanelTemplate PanelTemplate = new ItemsPanelTemplate(
-            () => new StackPanel());
-
         static TabStrip()
         {
-            ItemsPanelProperty.OverrideDefaultValue(typeof(TabStrip), PanelTemplate);
+            AutoSelectProperty.OverrideDefaultValue<TabStrip>(true);
+            FocusableProperty.OverrideDefaultValue(typeof(TabStrip), false);
         }
 
         public TabStrip()
         {
-            this.BindTwoWay(SelectedTabProperty, this, SelectingItemsControl.SelectedItemProperty);
+            this.GetObservable(SelectedItemProperty).Subscribe(x => this.SelectedTab = x as TabItem);
+            this.GetObservable(SelectedTabProperty).Subscribe(x => this.SelectedItem = x as TabItem);
         }
 
         public TabItem SelectedTab
@@ -35,10 +34,10 @@ namespace Perspex.Controls.Primitives
             set { this.SetValue(SelectedTabProperty, value); }
         }
 
-        protected override ItemContainerGenerator CreateItemContainerGenerator()
+        protected override IItemContainerGenerator CreateItemContainerGenerator()
         {
             TabControl tabControl = this.TemplatedParent as TabControl;
-            ItemContainerGenerator result;
+            IItemContainerGenerator result;
 
             if (tabControl != null)
             {
@@ -46,25 +45,10 @@ namespace Perspex.Controls.Primitives
             }
             else
             {
-                result = new TypedItemContainerGenerator<TabItem>(this);
+                result = new ItemContainerGenerator<TabItem>(this);
             }
-
-            result.StateChanged += this.ItemsContainerGeneratorStateChanged;
 
             return result;
-        }
-
-        private void ItemsContainerGeneratorStateChanged(object sender, EventArgs e)
-        {
-            if (this.ItemContainerGenerator.State == ItemContainerGeneratorState.Generated)
-            {
-                var tabs = this.ItemContainerGenerator.GetAll()
-                    .Select(x => x.Item2)
-                    .OfType<TabItem>()
-                    .ToList();
-
-                this.SelectedItem = tabs.FirstOrDefault(x => x.IsSelected) ?? tabs.FirstOrDefault();
-            }
         }
     }
 }

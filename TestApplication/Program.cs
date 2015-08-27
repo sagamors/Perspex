@@ -6,36 +6,18 @@ using Perspex.Collections;
 using Perspex.Controls;
 using Perspex.Controls.Primitives;
 using Perspex.Controls.Shapes;
+using Perspex.Controls.Templates;
 using Perspex.Diagnostics;
 using Perspex.Layout;
 using Perspex.Media;
 using Perspex.Media.Imaging;
-using Perspex.Rendering;
-using Perspex.Threading;
 #if PERSPEX_GTK
 using Perspex.Gtk;
-#else
-using ReactiveUI;
 #endif
-using Splat;
+using ReactiveUI;
 
 namespace TestApplication
 {
-    class TestLogger : ILogger
-    {
-        public LogLevel Level
-        {
-            get;
-            set;
-        }
-
-        public void Write(string message, LogLevel logLevel)
-        {
-            if ((int)logLevel < (int)Level) return;
-            System.Diagnostics.Debug.WriteLine(message);
-        }
-    }
-
     class Item
     {
         public string Name { get; set; }
@@ -98,12 +80,20 @@ namespace TestApplication
             new Item { Name = "Item 1", Value = "Item 1 Value" },
             new Item { Name = "Item 2", Value = "Item 2 Value" },
             new Item { Name = "Item 3", Value = "Item 3 Value" },
+            new Item { Name = "Item 4", Value = "Item 4 Value" },
+            new Item { Name = "Item 5", Value = "Item 5 Value" },
+            new Item { Name = "Item 6", Value = "Item 6 Value" },
+            new Item { Name = "Item 7", Value = "Item 7 Value" },
+            new Item { Name = "Item 8", Value = "Item 8 Value" },
         };
 
         static void Main(string[] args)
         {
-            //LogManager.Enable(new TestLogger());
-            //LogManager.Instance.LogLayoutMessages = true;
+            //Log.Logger = new LoggerConfiguration()
+            //    .Filter.ByIncludingOnly(Matching.WithProperty("Area", "Layout"))
+            //    .MinimumLevel.Verbose()
+            //    .WriteTo.Trace(outputTemplate: "[{Id:X8}] [{SourceContext}] {Message}")
+            //    .CreateLogger();
 
             // The version of ReactiveUI currently included is for WPF and so expects a WPF
             // dispatcher. This makes sure it's initialized.
@@ -122,9 +112,13 @@ namespace TestApplication
 
             TextBlock fps;
 
+            var testCommand = ReactiveCommand.Create();
+            testCommand.Subscribe(_ => System.Diagnostics.Debug.WriteLine("Test command executed."));
+
             Window window = new Window
             {
                 Title = "Perspex Test Application",
+                SizeToContent = SizeToContent.WidthAndHeight,
                 Content = new Grid
                 {
                     ColumnDefinitions = new ColumnDefinitions
@@ -134,11 +128,88 @@ namespace TestApplication
                     },
                     RowDefinitions = new RowDefinitions
                     {
+                        new RowDefinition(GridLength.Auto),
                         new RowDefinition(1, GridUnitType.Star),
                         new RowDefinition(GridLength.Auto),
                     },
                     Children = new Controls
                     {
+                        new Menu
+                        {
+                            Items = new[]
+                            {
+                                new MenuItem
+                                {
+                                    Header = "_File",
+                                    Items = new[]
+                                    {
+                                        new MenuItem
+                                        {
+                                            Header = "_Open...",
+                                            Icon = new Image
+                                            {
+                                                Source = new Bitmap("github_icon.png"),
+                                            },
+                                        },
+                                        new MenuItem
+                                        {
+                                            Header = "_Save",
+                                            Items = new[]
+                                            {
+                                                new MenuItem
+                                                {
+                                                    Header = "Sub Item _1",
+                                                },
+                                                new MenuItem
+                                                {
+                                                    Header = "Sub Item _2",
+                                                },
+                                            }
+                                        },
+                                        new MenuItem
+                                        {
+                                            Header = "Save _As",
+                                            Items = new[]
+                                            {
+                                                new MenuItem
+                                                {
+                                                    Header = "Sub Item _1",
+                                                },
+                                                new MenuItem
+                                                {
+                                                    Header = "Sub Item _2",
+                                                },
+                                            }
+                                        },
+                                        new MenuItem
+                                        {
+                                            Header = "E_xit",
+                                            Command = testCommand,
+                                        },
+                                    }
+                                },
+                                new MenuItem
+                                {
+                                    Header = "_Edit",
+                                    Items = new[]
+                                    {
+                                        new MenuItem
+                                        {
+                                            Header = "Cu_t",
+                                        },
+                                        new MenuItem
+                                        {
+                                            Header = "_Copy",
+                                        },
+                                        new MenuItem
+                                        {
+                                            Header = "_Paste",
+                                        },
+                                    }
+                                }
+                            },
+                            [Grid.ColumnSpanProperty] = 2,
+                        },
                         new TabControl
                         {
                             Items = new[]
@@ -147,17 +218,18 @@ namespace TestApplication
                                 TextTab(),
                                 ImagesTab(),
                                 ListsTab(),
-                                SlidersTab(),
                                 LayoutTab(),
                                 AnimationsTab(),
                             },
+                            Transition = new PageSlide(TimeSpan.FromSeconds(0.25)),
+                            [Grid.RowProperty] = 1,
                             [Grid.ColumnSpanProperty] = 2,
                         },
                         (fps = new TextBlock
                         {
                             HorizontalAlignment = HorizontalAlignment.Left,
                             Margin = new Thickness(2),
-                            [Grid.RowProperty] = 1,
+                            [Grid.RowProperty] = 2,
                         }),
                         new TextBlock
                         {
@@ -165,7 +237,7 @@ namespace TestApplication
                             HorizontalAlignment = HorizontalAlignment.Right,
                             Margin = new Thickness(2),
                             [Grid.ColumnProperty] = 1,
-                            [Grid.RowProperty] = 1,
+                            [Grid.RowProperty] = 2,
                         },
                     }
                 },
@@ -173,14 +245,14 @@ namespace TestApplication
 
             DevTools.Attach(window);
 
-            var renderer = ((IRenderRoot)window).Renderer;
-            var last = renderer.RenderCount;
-            DispatcherTimer.Run(() =>
-            {
-                fps.Text = "FPS: " + (renderer.RenderCount - last);
-                last = renderer.RenderCount;
-                return true;
-            }, TimeSpan.FromSeconds(1));
+            //var renderer = ((IRenderRoot)window).Renderer;
+            //var last = renderer.RenderCount;
+            //DispatcherTimer.Run(() =>
+            //{
+            //    fps.Text = "FPS: " + (renderer.RenderCount - last);
+            //    last = renderer.RenderCount;
+            //    return true;
+            //}, TimeSpan.FromSeconds(1));
 
             window.Show();
             Application.Current.Run(window);
@@ -188,6 +260,8 @@ namespace TestApplication
 
         private static TabItem ButtonsTab()
         {
+            Button defaultButton;
+
             var showDialog = ReactiveCommand.Create();
             Button showDialogButton;
             
@@ -207,12 +281,19 @@ namespace TestApplication
                         {
                             Content = "Button",
                             Command = showDialog,
+                            [ToolTip.TipProperty] = "Hello World!",
                         }),
                         new Button
                         {
                             Content = "Button",
                             Background = new SolidColorBrush(0xcc119eda),
+                            [ToolTip.TipProperty] = "Goodbye Cruel World!",
                         },
+                        (defaultButton = new Button
+                        {
+                            Content = "Default",
+                            IsDefault = true,
+                        }),
                         new Button
                         {
                             Content = "Disabled",
@@ -248,6 +329,11 @@ namespace TestApplication
                         },
                     }
                 },
+            };
+
+            defaultButton.Click += (s, e) =>
+            {
+                defaultButton.Content = ((string)defaultButton.Content == "Default") ? "Clicked" : "Default";
             };
 
             showDialog.Subscribe(async _ =>
@@ -294,16 +380,19 @@ namespace TestApplication
                         {
                             Text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin venenatis dui quis libero suscipit tincidunt.",
                             TextWrapping = TextWrapping.Wrap,
+                            TextAlignment = TextAlignment.Center,
                         },
                         new TextBlock
                         {
                             Text = "Italic text.",
                             FontStyle = FontStyle.Italic,
+                            TextAlignment = TextAlignment.Left,
                         },
                         new TextBlock
                         {
                             Text = "Bold text.",
                             FontWeight = FontWeight.Bold,
+                            TextAlignment = TextAlignment.Right,
                         },
                         new TextBox
                         {
@@ -343,7 +432,7 @@ namespace TestApplication
                         {
                             Minimum = 100,
                             Maximum = 400,
-                            Value = 400,
+                            Value = 100,
                             Orientation = Orientation.Horizontal,
                         }),
                         new ScrollViewer
@@ -358,6 +447,12 @@ namespace TestApplication
                                 [!Image.HeightProperty] = size[!ScrollBar.ValueProperty],
                             },
                         },
+                        new ProgressBar
+                        {
+                            [!ProgressBar.MinimumProperty] = size[!ScrollBar.MinimumProperty],
+                            [!ProgressBar.MaximumProperty] = size[!ScrollBar.MaximumProperty],
+                            [!ProgressBar.ValueProperty] = size[!ScrollBar.ValueProperty],
+                        }
                     }
                 },
             };
@@ -365,6 +460,8 @@ namespace TestApplication
 
         private static TabItem ListsTab()
         {
+            ListBox listBox;
+
             return new TabItem
             {
                 Header = "Lists",
@@ -390,13 +487,14 @@ namespace TestApplication
                     {
                         new TreeView
                         {
-                            Id = "treeView",
+                            Name = "treeView",
                             Items = treeData,
                         },
-                        new ListBox
+                        (listBox = new ListBox
                         {
                             Items = listBoxData,
-                        },
+                            MaxHeight = 300,
+                        }),
                         new DropDown
                         {
                             Items = listBoxData,
@@ -405,58 +503,6 @@ namespace TestApplication
                         }
                     }
                 },
-            };
-        }
-
-        private static TabItem SlidersTab()
-        {
-            ScrollBar sb;
-
-            return new TabItem
-            {
-                Header = "Sliders",
-                Content = new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions
-                    {
-                        new ColumnDefinition(GridLength.Auto),
-                        new ColumnDefinition(GridLength.Auto),
-                    },
-                    RowDefinitions = new RowDefinitions
-                    {
-                        new RowDefinition(GridLength.Auto),
-                        new RowDefinition(GridLength.Auto),
-                    },
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Children = new Controls
-                    {
-                        new ScrollBar
-                        {
-                            Orientation = Orientation.Vertical,
-                            Value = 25,
-                            Height = 300,
-                            [Grid.ColumnProperty] = 0,
-                            [Grid.RowProperty] = 1,
-                        },
-                        (sb = new ScrollBar
-                        {
-                            Orientation = Orientation.Horizontal,
-                            ViewportSize = 25,
-                            Value = 25,
-                            Width = 300,
-                            [Grid.ColumnProperty] = 1,
-                            [Grid.RowProperty] = 0,
-                        }),
-                        new TextBlock
-                        {
-                            HorizontalAlignment = HorizontalAlignment.Center,
-                            [!TextBlock.TextProperty] = sb[!ScrollBar.ValueProperty].Cast<double>().Select(x => x.ToString("0")),
-                            [Grid.ColumnProperty] = 1,
-                            [Grid.RowProperty] = 1,
-                        }
-                    },
-                }
             };
         }
 
@@ -538,7 +584,7 @@ namespace TestApplication
                             VerticalAlignment = VerticalAlignment.Center,
                             Background = Brushes.Crimson,
                             RenderTransform = new RotateTransform(),
-                            Content = new TextBox
+                            Child = new TextBox
                             {
                                 Background = Brushes.White,
                                 Text = "Hello!",
@@ -553,7 +599,7 @@ namespace TestApplication
                             HorizontalAlignment = HorizontalAlignment.Center,
                             VerticalAlignment = VerticalAlignment.Center,
                             Background = Brushes.Coral,
-                            Content = new Image
+                            Child = new Image
                             {
                                 Source = new Bitmap("github_icon.png"),
                                 HorizontalAlignment = HorizontalAlignment.Center,

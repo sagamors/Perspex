@@ -21,7 +21,7 @@ namespace Perspex.Controls.UnitTests
         {
             var target = new ScrollViewer
             {
-                Template = ControlTemplate.Create<ScrollViewer>(this.CreateTemplate),
+                Template = new ControlTemplate<ScrollViewer>(this.CreateTemplate),
                 Content = "Foo",
             };
 
@@ -37,7 +37,7 @@ namespace Perspex.Controls.UnitTests
         {
             var target = new ContentControl
             {
-                Template = ControlTemplate.Create<ContentControl>(this.CreateNestedTemplate),
+                Template = new ControlTemplate<ContentControl>(this.CreateNestedTemplate),
                 Content = "Foo",
             };
 
@@ -45,7 +45,7 @@ namespace Perspex.Controls.UnitTests
 
             var presenter = target.GetVisualDescendents()
                 .OfType<ContentPresenter>()
-                .Single(x => x.Id == "this");
+                .Single(x => x.Name == "this");
 
             Assert.Equal(target, presenter.TemplatedParent);
         }
@@ -68,7 +68,7 @@ namespace Perspex.Controls.UnitTests
                 {
                     new ScrollContentPresenter
                     {
-                        Id = "contentPresenter",
+                        Name = "contentPresenter",
                         [~ScrollContentPresenter.ContentProperty] = control[~ScrollViewer.ContentProperty],
                         [~~ScrollContentPresenter.ExtentProperty] = control[~~ScrollViewer.ExtentProperty],
                         [~~ScrollContentPresenter.OffsetProperty] = control[~~ScrollViewer.OffsetProperty],
@@ -77,7 +77,7 @@ namespace Perspex.Controls.UnitTests
                     },
                     new ScrollBar
                     {
-                        Id = "horizontalScrollBar",
+                        Name = "horizontalScrollBar",
                         Orientation = Orientation.Horizontal,
                         [~ScrollBar.MaximumProperty] = control[~ScrollViewer.HorizontalScrollBarMaximumProperty],
                         [~~ScrollBar.ValueProperty] = control[~~ScrollViewer.HorizontalScrollBarValueProperty],
@@ -87,7 +87,7 @@ namespace Perspex.Controls.UnitTests
                     },
                     new ScrollBar
                     {
-                        Id = "verticalScrollBar",
+                        Name = "verticalScrollBar",
                         Orientation = Orientation.Vertical,
                         [~ScrollBar.MaximumProperty] = control[~ScrollViewer.VerticalScrollBarMaximumProperty],
                         [~~ScrollBar.ValueProperty] = control[~~ScrollViewer.VerticalScrollBarValueProperty],
@@ -103,10 +103,10 @@ namespace Perspex.Controls.UnitTests
         {
             return new ScrollViewer
             {
-                Template = ControlTemplate.Create<ScrollViewer>(this.CreateTemplate),
+                Template = new ControlTemplate<ScrollViewer>(this.CreateTemplate),
                 Content = new ContentPresenter
                 {
-                    Id = "this"
+                    Name = "this"
                 }
             };
         }

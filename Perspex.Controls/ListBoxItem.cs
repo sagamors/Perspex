@@ -1,21 +1,36 @@
 ﻿// -----------------------------------------------------------------------
 // <copyright file="ListBoxItem.cs" company="Steven Kirk">
-// Copyright 2014 MIT Licence. See licence.md for more information.
+// Copyright 2015 MIT Licence. See licence.md for more information.
 // </copyright>
 // -----------------------------------------------------------------------
 
 namespace Perspex.Controls
 {
+    using Perspex.Controls.Mixins;
+
+    /// <summary>
+    /// A selectable item in a <see cref="ListBox"/>.
+    /// </summary>
     public class ListBoxItem : ContentControl, ISelectable
     {
+        /// <summary>
+        /// Defines the <see cref="IsSelected"/> property.
+        /// </summary>
         public static readonly PerspexProperty<bool> IsSelectedProperty =
-            PerspexProperty.Register<ListBoxItem, bool>("IsSelected");
+            PerspexProperty.Register<ListBoxItem, bool>(nameof(IsSelected));
 
+        /// <summary>
+        /// Initializes static members of the <see cref="ListBoxItem"/> class.
+        /// </summary>
         static ListBoxItem()
         {
-            Control.PseudoClass(IsSelectedProperty, ":selected");
+            SelectableMixin.Attach<ListBoxItem>(IsSelectedProperty);
+            FocusableProperty.OverrideDefaultValue<ListBoxItem>(true);
         }
 
+        /// <summary>
+        /// Gets or sets the selection state of the item.
+        /// </summary>
         public bool IsSelected
         {
             get { return this.GetValue(IsSelectedProperty); }

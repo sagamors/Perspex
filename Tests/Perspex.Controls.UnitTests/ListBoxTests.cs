@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-// <copyright file="ItemsControlTests.cs" company="Steven Kirk">
+// <copyright file="ListBoxTests.cs" company="Steven Kirk">
 // Copyright 2014 MIT Licence. See licence.md for more information.
 // </copyright>
 // -----------------------------------------------------------------------
@@ -10,6 +10,7 @@ namespace Perspex.Controls.UnitTests
     using System.Linq;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
+    using Perspex.Controls.Templates;
     using Perspex.LogicalTree;
     using Perspex.Styling;
     using Xunit;
@@ -35,6 +36,23 @@ namespace Perspex.Controls.UnitTests
             }
         }
 
+        [Fact]
+        public void Setting_Item_IsSelected_Sets_ListBox_Selection()
+        {
+            var target = new ListBox
+            {
+                Template = new ControlTemplate(this.CreateListBoxTemplate),
+                Items = new[] { "Foo", "Bar", "Baz " },
+            };
+
+            target.ApplyTemplate();
+
+            ((ListBoxItem)target.GetLogicalChildren().ElementAt(1)).IsSelected = true;
+
+            Assert.Equal("Bar", target.SelectedItem);
+            Assert.Equal(1, target.SelectedIndex);
+        }
+
         private Control CreateListBoxTemplate(ITemplatedControl parent)
         {
             return new ScrollViewer
@@ -42,7 +60,7 @@ namespace Perspex.Controls.UnitTests
                 Template = new ControlTemplate(this.CreateScrollViewerTemplate),
                 Content = new ItemsPresenter
                 {
-                    Id = "itemsPresenter",
+                    Name = "itemsPresenter",
                     [~ItemsPresenter.ItemsProperty] = parent.GetObservable(ListBox.ItemsProperty),
                 }
             };

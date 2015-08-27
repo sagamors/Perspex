@@ -44,14 +44,14 @@ namespace Perspex.Controls.Primitives
             {
                 if (val.Item1 != null)
                 {
-                    val.Item1.DragDelta -= ThumbDragged;
+                    val.Item1.DragDelta -= this.ThumbDragged;
                 }
 
                 this.ClearVisualChildren();
 
                 if (val.Item2 != null)
                 {
-                    val.Item2.DragDelta += ThumbDragged;
+                    val.Item2.DragDelta += this.ThumbDragged;
                     this.AddVisualChild(val.Item2);
                 }
             });
@@ -103,11 +103,11 @@ namespace Perspex.Controls.Primitives
 
                 if (this.Orientation == Orientation.Horizontal)
                 {
-                    return new Size(0, thumb.DesiredSize.Value.Height);
+                    return new Size(0, thumb.DesiredSize.Height);
                 }
                 else
                 {
-                    return new Size(thumb.DesiredSize.Value.Width, 0);
+                    return new Size(thumb.DesiredSize.Width, 0);
                 }
             }
 
@@ -124,7 +124,12 @@ namespace Perspex.Controls.Primitives
                 var thumbFraction = this.ViewportSize / range;
                 var valueFraction = (this.Value - this.Minimum) / range;
 
-                if (double.IsNaN(thumbFraction) || double.IsInfinity(thumbFraction))
+                if (double.IsNaN(valueFraction) || double.IsInfinity(valueFraction))
+                {
+                    valueFraction = 0;
+                    thumbFraction = 1;
+                }
+                else if (double.IsNaN(thumbFraction) || double.IsInfinity(thumbFraction))
                 {
                     thumbFraction = 0;
                 }
@@ -154,11 +159,11 @@ namespace Perspex.Controls.Primitives
 
             if (this.Orientation == Orientation.Horizontal)
             {
-                offset = e.Vector.X / ((this.ActualSize.Width - this.Thumb.ActualSize.Width) / range);
+                offset = e.Vector.X / ((this.Bounds.Size.Width - this.Thumb.Bounds.Size.Width) / range);
             }
             else
             {
-                offset = e.Vector.Y * (range / (this.ActualSize.Height - this.Thumb.ActualSize.Height));
+                offset = e.Vector.Y * (range / (this.Bounds.Size.Height - this.Thumb.Bounds.Size.Height));
             }
 
             if (!double.IsNaN(offset) && !double.IsInfinity(offset))

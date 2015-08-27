@@ -8,10 +8,12 @@ namespace Perspex.Themes.Default
 {
     using System.Linq;
     using System.Reactive.Linq;
+    using Collections;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
     using Perspex.Controls.Primitives;
     using Perspex.Controls.Shapes;
+    using Perspex.Controls.Templates;
     using Perspex.Layout;
     using Perspex.Media;
     using Perspex.Styling;
@@ -26,9 +28,10 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(DropDown.TemplateProperty, ControlTemplate.Create<DropDown>(this.Template)),
+                        new Setter(DropDown.TemplateProperty, new ControlTemplate<DropDown>(this.Template)),
                         new Setter(DropDown.BorderBrushProperty, new SolidColorBrush(0xff707070)),
                         new Setter(DropDown.BorderThicknessProperty, 2.0),
+                        new Setter(DropDown.FocusAdornerProperty, new AdornerTemplate(FocusAdornerTemplate)),
                         new Setter(DropDown.HorizontalContentAlignmentProperty, HorizontalAlignment.Center),
                         new Setter(DropDown.VerticalContentAlignmentProperty, VerticalAlignment.Center),
                     },
@@ -43,6 +46,17 @@ namespace Perspex.Themes.Default
             });
         }
 
+        public static Control FocusAdornerTemplate()
+        {
+            return new Rectangle
+            {
+                Stroke = Brushes.Black,
+                StrokeThickness = 1,
+                StrokeDashArray = new PerspexList<double>(1, 2),
+                Margin = new Thickness(3.5),
+            };
+        }
+
         private Control Template(DropDown control)
         {
             Border result = new Border
@@ -50,9 +64,9 @@ namespace Perspex.Themes.Default
                 [~Border.BackgroundProperty] = control[~DropDown.BackgroundProperty],
                 [~Border.BorderBrushProperty] = control[~DropDown.BorderBrushProperty],
                 [~Border.BorderThicknessProperty] = control[~DropDown.BorderThicknessProperty],
-                Content = new Grid
+                Child = new Grid
                 {
-                    Id = "container",
+                    Name = "container",
                     ColumnDefinitions = new ColumnDefinitions
                     {
                         new ColumnDefinition(new GridLength(1, GridUnitType.Star)),
@@ -62,7 +76,7 @@ namespace Perspex.Themes.Default
                     {
                         new ContentControl
                         {
-                            Id = "contentControl",
+                            Name = "contentControl",
                             Margin = new Thickness(3),
                             [~ContentControl.ContentProperty] = control[~DropDown.ContentProperty],
                             [~ContentControl.HorizontalAlignmentProperty] = control[~DropDown.HorizontalContentAlignmentProperty],
@@ -70,13 +84,14 @@ namespace Perspex.Themes.Default
                         },
                         new ToggleButton
                         {
-                            Id = "toggle",
+                            Name = "toggle",
                             BorderThickness = 0,
                             Background = Brushes.Transparent,
                             ClickMode = ClickMode.Press,
+                            Focusable = false,
                             Content = new Path
                             {
-                                Id = "checkMark",
+                                Name = "checkMark",
                                 Fill = Brushes.Black,
                                 Width = 8,
                                 Height = 4,
@@ -91,15 +106,21 @@ namespace Perspex.Themes.Default
                         },
                         new Popup
                         {
-                            Child = new ListBox
+                            Name = "popup",
+                            Child = new Border
                             {
-                                [~ListBox.ItemsProperty] = control[~DropDown.ItemsProperty],
-                                [~~ListBox.SelectedItemProperty] = control[~~DropDown.SelectedItemProperty],
+                                BorderBrush = Brushes.Black,
+                                BorderThickness = 1,
+                                Padding = new Thickness(4),
+                                Child = new ItemsPresenter
+                                {
+                                    [~ListBox.ItemsProperty] = control[~DropDown.ItemsProperty],
+                                }
                             },
                             PlacementTarget = control,
                             StaysOpen = false,
                             [~~Popup.IsOpenProperty] = control[~~DropDown.IsDropDownOpenProperty],
-                            [~Popup.MinWidthProperty] = control[~DropDown.ActualSizeProperty].Cast<Size>().Select(x => (object)x.Width),
+                            [~Popup.MinWidthProperty] = control[~DropDown.BoundsProperty].Cast<Rect>().Select(x => (object)x.Width),
                         }
                     },
                 },

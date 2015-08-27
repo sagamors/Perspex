@@ -7,14 +7,15 @@
 namespace Perspex.Controls
 {
     using System;
-    using Perspex.Collections;
-    using Perspex.Controls.Presenters;
+    using System.Linq;
+    using Generators;
     using Perspex.Controls.Primitives;
     using Perspex.Controls.Templates;
     using Perspex.Input;
     using Perspex.Layout;
+    using VisualTree;
 
-    public class DropDown : SelectingItemsControl, IContentControl, ILogical
+    public class DropDown : SelectingItemsControl, IContentControl
     {
         public static readonly PerspexProperty<object> ContentProperty =
             ContentControl.ContentProperty.AddOwner<DropDown>();
@@ -28,7 +29,12 @@ namespace Perspex.Controls
         public static readonly PerspexProperty<bool> IsDropDownOpenProperty =
             PerspexProperty.Register<DropDown, bool>("IsDropDownOpen");
 
-        private PerspexReadOnlyListView<ILogical> logicalChildren = new PerspexReadOnlyListView<ILogical>();
+        private Popup popup;
+
+        static DropDown()
+        {
+            FocusableProperty.OverrideDefaultValue<DropDown>(true);
+        }
 
         public DropDown()
         {
@@ -60,24 +66,64 @@ namespace Perspex.Controls
             set { this.SetValue(IsDropDownOpenProperty, value); }
         }
 
-        IPerspexReadOnlyList<ILogical> ILogical.LogicalChildren
+        protected override IItemContainerGenerator CreateItemContainerGenerator()
         {
-            get { return this.logicalChildren; }
+            return new ItemContainerGenerator<ListBoxItem>(this);
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            if (!e.Handled)
+            {
+                if (e.Key == Key.F4 ||
+                    (e.Key == Key.Down && ((e.Device.Modifiers & ModifierKeys.Alt) != 0)))
+                {
+                    this.IsDropDownOpen = !this.IsDropDownOpen;
+                    e.Handled = true;
+                }
+                else if (this.IsDropDownOpen && (e.Key == Key.Escape || e.Key == Key.Enter))
+                {
+                    this.IsDropDownOpen = false;
+                    e.Handled = true;
+                }
+            }
         }
 
         protected override void OnPointerPressed(PointerPressEventArgs e)
         {
             if (!this.IsDropDownOpen)
             {
-                this.IsDropDownOpen = true;
+                if (((IVisual)e.Source).GetVisualAncestors().Last().GetType() != typeof(PopupRoot))
+                {
+                    this.IsDropDownOpen = true;
+                }
             }
+
+            base.OnPointerPressed(e);
         }
 
         protected override void OnTemplateApplied()
         {
-            var container = this.GetTemplateChild<Panel>("container");
-            ((IItemsPanel)container).ChildLogicalParent = this;
-            this.logicalChildren.Source = ((ILogical)container).LogicalChildren;
+            if (this.popup != null)
+            {
+                this.popup.Opened -= this.PopupOpened;
+            }
+
+            this.popup = this.GetTemplateChild<Popup>("popup");
+            this.popup.Opened += this.PopupOpened;
+        }
+
+        private void PopupOpened(object sender, EventArgs e)
+        {
+            var selectedIndex = this.SelectedIndex;
+
+            if (selectedIndex != -1)
+            {
+                var container = this.ItemContainerGenerator.ContainerFromIndex(selectedIndex);
+                container.Focus();
+            }
         }
 
         private void SetContentParent(Tuple<object, object> change)
@@ -87,12 +133,12 @@ namespace Perspex.Controls
 
             if (control1 != null)
             {
-                control1.Parent = null;
+                ((ISetLogicalParent)control1).SetParent(null);
             }
 
             if (control2 != null)
             {
-                control2.Parent = this;
+                ((ISetLogicalParent)control2).SetParent(this);
             }
         }
     }

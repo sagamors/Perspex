@@ -7,6 +7,7 @@
 namespace Perspex.Input
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Reactive.Linq;
     using Perspex.Input.Raw;
@@ -22,6 +23,8 @@ namespace Perspex.Input
         private Rect lastClickRect;
 
         private uint lastClickTime;
+
+        private List<IInputElement> pointerOvers = new List<IInputElement>();
 
         public MouseDevice()
         {
@@ -60,7 +63,7 @@ namespace Perspex.Input
 
         public Point GetPosition(IVisual relativeTo)
         {
-            Point p = this.GetClientPosition();
+            Point p = this.Position;
             IVisual v = relativeTo;
 
             while (v != null)
@@ -71,8 +74,6 @@ namespace Perspex.Input
 
             return p;
         }
-
-        protected abstract Point GetClientPosition();
 
         private void ProcessRawEvent(RawMouseEventArgs e)
         {
@@ -102,7 +103,7 @@ namespace Perspex.Input
 
         private void LeaveWindow(IMouseDevice device, IInputElement root)
         {
-            this.InputManager.ClearPointerOver(this);
+            this.ClearPointerOver(this);
         }
 
         private void MouseDown(IMouseDevice device, uint timestamp, IInputElement root, Point p)
@@ -139,13 +140,6 @@ namespace Perspex.Input
 
                     source.RaiseEvent(e);
                 }
-
-                IInputElement focusable = this.GetFocusable(hit);
-
-                if (focusable != null && focusable.Focusable)
-                {
-                    focusable.Focus();
-                }
             }
         }
 
@@ -155,7 +149,7 @@ namespace Perspex.Input
 
             if (this.Captured == null)
             {
-                this.InputManager.SetPointerOver(this, root, p);
+                this.SetPointerOver(this, root, p);
                 source = root as IInteractive;
             }
             else
@@ -167,7 +161,7 @@ namespace Perspex.Input
                     offset += ancestor.Bounds.Position;
                 }
 
-                this.InputManager.SetPointerOver(this, this.Captured, p - offset);
+                this.SetPointerOver(this, this.Captured, p - offset);
                 source = this.Captured as IInteractive;
             }
 
@@ -226,22 +220,66 @@ namespace Perspex.Input
             }
         }
 
-        private IInputElement GetFocusable(IVisual hit)
-        {
-            return this.Captured as IInputElement ?? 
-                hit.GetSelfAndVisualAncestors().OfType<IInputElement>().FirstOrDefault(x => x.Focusable);
-        }
-
         private IInteractive GetSource(IVisual hit)
         {
-            return this.Captured ?? 
-                (hit as IInteractive) ?? 
+            return this.Captured ??
+                (hit as IInteractive) ??
                 hit.GetSelfAndVisualAncestors().OfType<IInteractive>().FirstOrDefault();
         }
 
         private IInputElement HitTest(IInputElement root, Point p)
         {
             return this.Captured ?? root.InputHitTest(p);
+        }
+
+        private void ClearPointerOver(IPointerDevice device)
+        {
+            foreach (var control in this.pointerOvers.ToList())
+            {
+                PointerEventArgs e = new PointerEventArgs
+                {
+                    RoutedEvent = InputElement.PointerLeaveEvent,
+                    Device = device,
+                    OriginalSource = control,
+                    Source = control,
+                };
+
+                this.pointerOvers.Remove(control);
+                control.RaiseEvent(e);
+            }
+        }
+
+        private void SetPointerOver(IPointerDevice device, IInputElement element, Point p)
+        {
+            IEnumerable<IInputElement> hits = element.GetInputElementsAt(p);
+
+            foreach (var control in this.pointerOvers.Except(hits).ToList())
+            {
+                PointerEventArgs e = new PointerEventArgs
+                {
+                    RoutedEvent = InputElement.PointerLeaveEvent,
+                    Device = device,
+                    OriginalSource = control,
+                    Source = control,
+                };
+
+                this.pointerOvers.Remove(control);
+                control.RaiseEvent(e);
+            }
+
+            foreach (var control in hits.Except(this.pointerOvers))
+            {
+                PointerEventArgs e = new PointerEventArgs
+                {
+                    RoutedEvent = InputElement.PointerEnterEvent,
+                    Device = device,
+                    OriginalSource = control,
+                    Source = control,
+                };
+
+                this.pointerOvers.Add(control);
+                control.RaiseEvent(e);
+            }
         }
     }
 }

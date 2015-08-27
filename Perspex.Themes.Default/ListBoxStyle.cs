@@ -9,7 +9,7 @@ namespace Perspex.Themes.Default
     using System.Linq;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
-    using Perspex.Layout;
+    using Perspex.Controls.Templates;
     using Perspex.Media;
     using Perspex.Styling;
 
@@ -23,7 +23,7 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(ListBox.TemplateProperty, ControlTemplate.Create<ListBox>(this.Template)),
+                        new Setter(ListBox.TemplateProperty, new ControlTemplate<ListBox>(this.Template)),
                         new Setter(ListBox.BorderBrushProperty, Brushes.Black),
                         new Setter(ListBox.BorderThicknessProperty, 1.0),
                     },
@@ -39,11 +39,11 @@ namespace Perspex.Themes.Default
                 [~Border.BackgroundProperty] = control[~ListBox.BackgroundProperty],
                 [~Border.BorderBrushProperty] = control[~ListBox.BorderBrushProperty],
                 [~Border.BorderThicknessProperty] = control[~ListBox.BorderThicknessProperty],
-                Content = new ScrollViewer
+                Child = new ScrollViewer
                 {
                     Content = new ItemsPresenter
                     {
-                        Id = "itemsPresenter",
+                        Name = "itemsPresenter",
                         [~ItemsPresenter.ItemsProperty] = control[~ListBox.ItemsProperty],
                         [~ItemsPresenter.ItemsPanelProperty] = control[~ListBox.ItemsPanelProperty],
                     }

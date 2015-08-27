@@ -1,6 +1,6 @@
 ﻿// -----------------------------------------------------------------------
 // <copyright file="Grid.cs" company="Steven Kirk">
-// Copyright 2013 MIT Licence. See licence.md for more information.
+// Copyright 2015 MIT Licence. See licence.md for more information.
 // </copyright>
 // -----------------------------------------------------------------------
 
@@ -11,17 +11,32 @@ namespace Perspex.Controls
     using System.Linq;
     using Perspex.Collections;
 
+    /// <summary>
+    /// Lays out child controls according to a grid.
+    /// </summary>
     public class Grid : Panel
     {
+        /// <summary>
+        /// Defines the Column attached property.
+        /// </summary>
         public static readonly PerspexProperty<int> ColumnProperty =
             PerspexProperty.RegisterAttached<Grid, Control, int>("Column");
 
+        /// <summary>
+        /// Defines the ColumnSpan attached property.
+        /// </summary>
         public static readonly PerspexProperty<int> ColumnSpanProperty =
             PerspexProperty.RegisterAttached<Grid, Control, int>("ColumnSpan", 1);
 
+        /// <summary>
+        /// Defines the Row attached property.
+        /// </summary>
         public static readonly PerspexProperty<int> RowProperty =
             PerspexProperty.RegisterAttached<Grid, Control, int>("Row");
 
+        /// <summary>
+        /// Defines the RowSpan attached property.
+        /// </summary>
         public static readonly PerspexProperty<int> RowSpanProperty =
             PerspexProperty.RegisterAttached<Grid, Control, int>("RowSpan", 1);
 
@@ -33,10 +48,9 @@ namespace Perspex.Controls
 
         private Segment[,] colMatrix;
 
-        public Grid()
-        {
-        }
-
+        /// <summary>
+        /// Gets or sets the columns definitions for the grid.
+        /// </summary>
         public ColumnDefinitions ColumnDefinitions
         {
             get
@@ -61,6 +75,9 @@ namespace Perspex.Controls
             }
         }
 
+        /// <summary>
+        /// Gets or sets the row definitions for the grid.
+        /// </summary>
         public RowDefinitions RowDefinitions
         {
             get
@@ -85,46 +102,91 @@ namespace Perspex.Controls
             }
         }
 
+        /// <summary>
+        /// Gets the value of the Column attached property for a control.
+        /// </summary>
+        /// <param name="element">The control.</param>
+        /// <returns>The control's column.</returns>
         public static int GetColumn(PerspexObject element)
         {
             return element.GetValue(ColumnProperty);
         }
 
+        /// <summary>
+        /// Gets the value of the ColumnSpan attached property for a control.
+        /// </summary>
+        /// <param name="element">The control.</param>
+        /// <returns>The control's column span.</returns>
         public static int GetColumnSpan(PerspexObject element)
         {
             return element.GetValue(ColumnSpanProperty);
         }
 
+        /// <summary>
+        /// Gets the value of the Row attached property for a control.
+        /// </summary>
+        /// <param name="element">The control.</param>
+        /// <returns>The control's row.</returns>
         public static int GetRow(PerspexObject element)
         {
             return element.GetValue(RowProperty);
         }
 
+        /// <summary>
+        /// Gets the value of the RowSpan attached property for a control.
+        /// </summary>
+        /// <param name="element">The control.</param>
+        /// <returns>The control's row span.</returns>
         public static int GetRowSpan(PerspexObject element)
         {
             return element.GetValue(RowSpanProperty);
         }
 
+        /// <summary>
+        /// Sets the value of the Column attached property for a control.
+        /// </summary>
+        /// <param name="element">The control.</param>
+        /// <param name="value">The column value.</param>
         public static void SetColumn(PerspexObject element, int value)
         {
             element.SetValue(ColumnProperty, value);
         }
 
+        /// <summary>
+        /// Sets the value of the ColumnSpan attached property for a control.
+        /// </summary>
+        /// <param name="element">The control.</param>
+        /// <param name="value">The column span value.</param>
         public static void SetColumnSpan(PerspexObject element, int value)
         {
             element.SetValue(ColumnSpanProperty, value);
         }
 
+        /// <summary>
+        /// Sets the value of the Row attached property for a control.
+        /// </summary>
+        /// <param name="element">The control.</param>
+        /// <param name="value">The row value.</param>
         public static void SetRow(PerspexObject element, int value)
         {
             element.SetValue(RowProperty, value);
         }
 
+        /// <summary>
+        /// Sets the value of the RowSpan attached property for a control.
+        /// </summary>
+        /// <param name="element">The control.</param>
+        /// <param name="value">The row span value.</param>
         public static void SetRowSpan(PerspexObject element, int value)
         {
             element.SetValue(RowSpanProperty, value);
         }
 
+        /// <summary>
+        /// Measures the grid.
+        /// </summary>
+        /// <param name="constraint">The available size.</param>
+        /// <returns>The desired size of the control.</returns>
         protected override Size MeasureOverride(Size constraint)
         {
             Size totalSize = constraint;
@@ -276,7 +338,7 @@ namespace Perspex.Controls
 
                     // This series of if statements checks whether or not we should measure
                     // the current element and also if we need to override the sizes
-                    // passed to the Measure call. 
+                    // passed to the Measure call.
 
                     // If the element has Auto rows and Auto columns and does not span Star
                     // rows/cols it should only be measured in the auto_auto phase.
@@ -359,7 +421,7 @@ namespace Perspex.Controls
                     }
 
                     child.Measure(new Size(childSizeX, childSizeY));
-                    Size desired = child.DesiredSize.Value;
+                    Size desired = child.DesiredSize;
 
                     // Elements distribute their height based on two rules:
                     // 1) Elements with rowspan/colspan == 1 distribute their height first
@@ -402,7 +464,7 @@ namespace Perspex.Controls
 
             double gridSizeX = 0;
             double gridSizeY = 0;
-            
+
             for (int c = 0; c < colCount; c++)
             {
                 gridSizeX += this.colMatrix[c, c].DesiredSize;
@@ -416,25 +478,30 @@ namespace Perspex.Controls
             return new Size(gridSizeX, gridSizeY);
         }
 
+        /// <summary>
+        /// Arranges the grid's children.
+        /// </summary>
+        /// <param name="finalSize">The size allocated to the control.</param>
+        /// <returns>The space taken.</returns>
         protected override Size ArrangeOverride(Size finalSize)
         {
             int colCount = this.ColumnDefinitions.Count;
             int rowCount = this.RowDefinitions.Count;
-            int colMatrixDim = this.colMatrix.GetUpperBound(0) + 1;
-            int rowMatrixDim = this.rowMatrix.GetUpperBound(0) + 1;
+            int colMatrixDim = this.colMatrix.GetLength(0);
+            int rowMatrixDim = this.rowMatrix.GetLength(0);
 
             this.RestoreMeasureResults();
 
             double totalConsumedX = 0;
             double totalConsumedY = 0;
 
-            for (int c = 0; c < colMatrixDim; c++) 
+            for (int c = 0; c < colMatrixDim; c++)
             {
                 this.colMatrix[c, c].OfferedSize = this.colMatrix[c, c].DesiredSize;
                 totalConsumedX += this.colMatrix[c, c].OfferedSize;
             }
 
-            for (int r = 0; r < rowMatrixDim; r++) 
+            for (int r = 0; r < rowMatrixDim; r++)
             {
                 this.rowMatrix[r, r].OfferedSize = this.rowMatrix[r, r].DesiredSize;
                 totalConsumedY += this.rowMatrix[r, r].OfferedSize;
@@ -517,8 +584,8 @@ namespace Perspex.Controls
         private void CreateMatrices(int rowCount, int colCount)
         {
             if (this.rowMatrix == null || this.colMatrix == null ||
-                this.rowMatrix.GetUpperBound(0) != rowCount - 1 ||
-                this.colMatrix.GetUpperBound(0) != colCount - 1)
+                this.rowMatrix.GetLength(0) != rowCount ||
+                this.colMatrix.GetLength(0) != colCount)
             {
                 this.rowMatrix = new Segment[rowCount, rowCount];
                 this.colMatrix = new Segment[colCount, colCount];
@@ -527,10 +594,11 @@ namespace Perspex.Controls
 
         private void ExpandStarCols(Size availableSize)
         {
+            int matrixCount = this.colMatrix.GetLength(0);
             int columnsCount = this.ColumnDefinitions.Count;
             double width = availableSize.Width;
 
-            for (int i = 0; i < this.colMatrix.GetUpperBound(0) + 1; i++) 
+            for (int i = 0; i < matrixCount; i++)
             {
                 if (this.colMatrix[i, i].Type == GridUnitType.Star)
                 {
@@ -542,12 +610,12 @@ namespace Perspex.Controls
                 }
             }
 
-            this.AssignSize(this.colMatrix, 0, this.colMatrix.GetUpperBound(0), ref width, GridUnitType.Star, false);
+            this.AssignSize(this.colMatrix, 0, matrixCount - 1, ref width, GridUnitType.Star, false);
             width = Math.Max(0, width);
 
-            if (columnsCount > 0) 
+            if (columnsCount > 0)
             {
-                for (int i = 0; i < this.colMatrix.GetUpperBound(0) + 1; i++)
+                for (int i = 0; i < matrixCount; i++)
                 {
                     if (this.colMatrix[i, i].Type == GridUnitType.Star)
                     {
@@ -559,13 +627,14 @@ namespace Perspex.Controls
 
         private void ExpandStarRows(Size availableSize)
         {
+            int matrixCount = this.rowMatrix.GetLength(0);
             int rowCount = this.RowDefinitions.Count;
             double height = availableSize.Height;
 
             // When expanding star rows, we need to zero out their height before
-            // calling AssignSize. AssignSize takes care of distributing the 
+            // calling AssignSize. AssignSize takes care of distributing the
             // available size when there are Mins and Maxs applied.
-            for (int i = 0; i < this.rowMatrix.GetUpperBound(0) + 1; i++) 
+            for (int i = 0; i < matrixCount; i++)
             {
                 if (this.rowMatrix[i, i].Type == GridUnitType.Star)
                 {
@@ -577,11 +646,11 @@ namespace Perspex.Controls
                 }
             }
 
-            this.AssignSize(this.rowMatrix, 0, this.rowMatrix.GetUpperBound(0), ref height, GridUnitType.Star, false);
+            this.AssignSize(this.rowMatrix, 0, matrixCount - 1, ref height, GridUnitType.Star, false);
 
-            if (rowCount > 0) 
+            if (rowCount > 0)
             {
-                for (int i = 0; i < this.rowMatrix.GetUpperBound(0) + 1; i++)
+                for (int i = 0; i < matrixCount; i++)
                 {
                     if (this.rowMatrix[i, i].Type == GridUnitType.Star)
                     {
@@ -592,11 +661,11 @@ namespace Perspex.Controls
         }
 
         private void AssignSize(
-            Segment[,] matrix, 
-            int start, 
-            int end, 
-            ref double size, 
-            GridUnitType type, 
+            Segment[,] matrix,
+            int start,
+            int end,
+            ref double size,
+            GridUnitType type,
             bool desiredSize)
         {
             double count = 0;
@@ -604,24 +673,24 @@ namespace Perspex.Controls
 
             // Count how many segments are of the correct type. If we're measuring Star rows/cols
             // we need to count the number of stars instead.
-            for (int i = start; i <= end; i++) 
+            for (int i = start; i <= end; i++)
             {
-                double segmentSize = desiredSize ? (matrix[i, i].DesiredSize) : matrix[i, i].OfferedSize;
+                double segmentSize = desiredSize ? matrix[i, i].DesiredSize : matrix[i, i].OfferedSize;
                 if (segmentSize < matrix[i, i].Max)
                 {
-                    count += type == GridUnitType.Star ? (matrix[i, i].Stars) : 1;
+                    count += type == GridUnitType.Star ? matrix[i, i].Stars : 1;
                 }
             }
 
-            do 
+            do
             {
                 double contribution = size / count;
 
                 assigned = false;
 
-                for (int i = start; i <= end; i++) 
+                for (int i = start; i <= end; i++)
                 {
-                    double segmentSize = desiredSize ? (matrix[i, i].DesiredSize) : matrix[i, i].OfferedSize;
+                    double segmentSize = desiredSize ? matrix[i, i].DesiredSize : matrix[i, i].OfferedSize;
 
                     if (!(matrix[i, i].Type == type && segmentSize < matrix[i, i].Max))
                     {
@@ -629,7 +698,7 @@ namespace Perspex.Controls
                     }
 
                     double newsize = segmentSize;
-                    newsize += contribution * (type == GridUnitType.Star ? (matrix[i, i].Stars) : 1);
+                    newsize += contribution * (type == GridUnitType.Star ? matrix[i, i].Stars : 1);
                     newsize = Math.Min(newsize, matrix[i, i].Max);
                     assigned |= newsize > segmentSize;
                     size -= newsize - segmentSize;
@@ -643,7 +712,7 @@ namespace Perspex.Controls
                         matrix[i, i].OfferedSize = newsize;
                     }
                 }
-            } 
+            }
             while (assigned);
         }
 
@@ -651,14 +720,14 @@ namespace Perspex.Controls
         {
             // First allocate the heights of the RowDefinitions, then allocate
             // the widths of the ColumnDefinitions.
-            for (int i = 0; i < 2; i++) 
+            for (int i = 0; i < 2; i++)
             {
                 Segment[,] matrix = i == 0 ? this.rowMatrix : this.colMatrix;
                 int count = i == 0 ? rowCount : colCount;
 
-                for (int row = count - 1; row >= 0; row--) 
+                for (int row = count - 1; row >= 0; row--)
                 {
-                    for (int col = row; col >= 0; col--) 
+                    for (int col = row; col >= 0; col--)
                     {
                         bool spansStar = false;
                         for (int j = row; j >= col; j--)
@@ -676,7 +745,7 @@ namespace Perspex.Controls
                         // in the range col -> row. The amount of pixels allocated to each grid row/column
                         // is found on the diagonal of the matrix.
                         double totalAllocated = 0;
-                        
+
                         for (int k = row; k >= col; k--)
                         {
                             totalAllocated += matrix[k, k].DesiredSize;
@@ -685,15 +754,15 @@ namespace Perspex.Controls
                         // If the size requirement has not been met, allocate the additional required
                         // size between 'pixel' rows, then 'star' rows, finally 'auto' rows, until all
                         // height has been assigned.
-                        if (totalAllocated < current) 
+                        if (totalAllocated < current)
                         {
                             double additional = current - totalAllocated;
 
-                            if (spansStar) 
+                            if (spansStar)
                             {
                                 this.AssignSize(matrix, col, row, ref additional, GridUnitType.Star, true);
-                            } 
-                            else 
+                            }
+                            else
                             {
                                 this.AssignSize(matrix, col, row, ref additional, GridUnitType.Pixel, true);
                                 this.AssignSize(matrix, col, row, ref additional, GridUnitType.Auto, true);
@@ -703,12 +772,15 @@ namespace Perspex.Controls
                 }
             }
 
-            for (int r = 0; r < this.rowMatrix.GetUpperBound(0) + 1; r++)
+            int rowMatrixDim = this.rowMatrix.GetLength(0);
+            int colMatrixDim = this.colMatrix.GetLength(0);
+
+            for (int r = 0; r < rowMatrixDim; r++)
             {
                 this.rowMatrix[r, r].OfferedSize = this.rowMatrix[r, r].DesiredSize;
             }
 
-            for (int c = 0; c < this.colMatrix.GetUpperBound(0) + 1; c++)
+            for (int c = 0; c < colMatrixDim; c++)
             {
                 this.colMatrix[c, c].OfferedSize = this.colMatrix[c, c].DesiredSize;
             }
@@ -716,17 +788,20 @@ namespace Perspex.Controls
 
         private void SaveMeasureResults()
         {
-            for (int i = 0; i < this.rowMatrix.GetUpperBound(0) + 1; i++)
+            int rowMatrixDim = this.rowMatrix.GetLength(0);
+            int colMatrixDim = this.colMatrix.GetLength(0);
+
+            for (int i = 0; i < rowMatrixDim; i++)
             {
-                for (int j = 0; j < this.rowMatrix.GetUpperBound(0) + 1; j++)
+                for (int j = 0; j < rowMatrixDim; j++)
                 {
                     this.rowMatrix[i, j].OriginalSize = this.rowMatrix[i, j].OfferedSize;
                 }
             }
 
-            for (int i = 0; i < this.colMatrix.GetUpperBound(0); i++)
+            for (int i = 0; i < colMatrixDim; i++)
             {
-                for (int j = 0; j < this.colMatrix.GetUpperBound(0); j++)
+                for (int j = 0; j < colMatrixDim; j++)
                 {
                     this.colMatrix[i, j].OriginalSize = this.colMatrix[i, j].OfferedSize;
                 }
@@ -735,17 +810,20 @@ namespace Perspex.Controls
 
         private void RestoreMeasureResults()
         {
-            for (int i = 0; i < this.rowMatrix.GetUpperBound(0) + 1; i++)
+            int rowMatrixDim = this.rowMatrix.GetLength(0);
+            int colMatrixDim = this.colMatrix.GetLength(0);
+
+            for (int i = 0; i < rowMatrixDim; i++)
             {
-                for (int j = 0; j < this.rowMatrix.GetUpperBound(0) + 1; j++)
+                for (int j = 0; j < rowMatrixDim; j++)
                 {
                     this.rowMatrix[i, j].OfferedSize = this.rowMatrix[i, j].OriginalSize;
                 }
             }
 
-            for (int i = 0; i < this.colMatrix.GetUpperBound(0) + 1; i++)
+            for (int i = 0; i < colMatrixDim; i++)
             {
-                for (int j = 0; j < this.colMatrix.GetUpperBound(0) + 1; j++)
+                for (int j = 0; j < colMatrixDim; j++)
                 {
                     this.colMatrix[i, j].OfferedSize = this.colMatrix[i, j].OriginalSize;
                 }
@@ -798,10 +876,13 @@ namespace Perspex.Controls
             }
         }
 
-        private class GridWalker 
+        private class GridWalker
         {
             public GridWalker(Grid grid, Segment[,] rowMatrix, Segment[,] colMatrix)
             {
+                int rowMatrixDim = rowMatrix.GetLength(0);
+                int colMatrixDim = colMatrix.GetLength(0);
+
                 foreach (Control child in grid.Children)
                 {
                     bool starCol = false;
@@ -809,18 +890,18 @@ namespace Perspex.Controls
                     bool autoCol = false;
                     bool autoRow = false;
 
-                    int col = Math.Min(Grid.GetColumn(child), colMatrix.GetUpperBound(0));
-                    int row = Math.Min(Grid.GetRow(child), rowMatrix.GetUpperBound(0));
-                    int colspan = Math.Min(Grid.GetColumnSpan(child), colMatrix.GetUpperBound(0));
-                    int rowspan = Math.Min(Grid.GetRowSpan(child), rowMatrix.GetUpperBound(0));
+                    int col = Math.Min(Grid.GetColumn(child), colMatrixDim - 1);
+                    int row = Math.Min(Grid.GetRow(child), rowMatrixDim - 1);
+                    int colspan = Math.Min(Grid.GetColumnSpan(child), colMatrixDim - 1);
+                    int rowspan = Math.Min(Grid.GetRowSpan(child), rowMatrixDim - 1);
 
-                    for (int r = row; r < row + rowspan; r++) 
+                    for (int r = row; r < row + rowspan; r++)
                     {
                         starRow |= rowMatrix[r, r].Type == GridUnitType.Star;
                         autoRow |= rowMatrix[r, r].Type == GridUnitType.Auto;
                     }
 
-                    for (int c = col; c < col + colspan; c++) 
+                    for (int c = col; c < col + colspan; c++)
                     {
                         starCol |= colMatrix[c, c].Type == GridUnitType.Star;
                         autoCol |= colMatrix[c, c].Type == GridUnitType.Auto;
@@ -835,7 +916,7 @@ namespace Perspex.Controls
             public bool HasAutoAuto { get; private set; }
 
             public bool HasStarAuto { get; private set; }
-            
+
             public bool HasAutoStar { get; private set; }
         }
     }

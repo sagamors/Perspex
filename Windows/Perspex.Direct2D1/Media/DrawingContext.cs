@@ -43,10 +43,13 @@ namespace Perspex.Direct2D1.Media
             this.renderTarget.BeginDraw();
         }
 
+        /// <summary>
+        /// Gets the current transform of the drawing context.
+        /// </summary>
         public Matrix CurrentTransform
         {
             get { return this.renderTarget.Transform.ToPerspex(); }
-            set { this.renderTarget.Transform = value.ToDirect2D(); }
+            private set { this.renderTarget.Transform = value.ToDirect2D(); }
         }
 
         /// <summary>
@@ -57,9 +60,16 @@ namespace Perspex.Direct2D1.Media
             this.renderTarget.EndDraw();
         }
 
-        public void DrawImage(IBitmap bitmap, double opacity, Rect sourceRect, Rect destRect)
+        /// <summary>
+        /// Draws a bitmap image.
+        /// </summary>
+        /// <param name="source">The bitmap image.</param>
+        /// <param name="opacity">The opacity to draw with.</param>
+        /// <param name="sourceRect">The rect in the image to draw.</param>
+        /// <param name="destRect">The rect in the output to draw to.</param>
+        public void DrawImage(IBitmap source, double opacity, Rect sourceRect, Rect destRect)
         {
-            BitmapImpl impl = (BitmapImpl)bitmap.PlatformImpl;
+            BitmapImpl impl = (BitmapImpl)source.PlatformImpl;
             Bitmap d2d = impl.GetDirect2DBitmap(this.renderTarget);
             this.renderTarget.DrawBitmap(
                 d2d,
@@ -74,14 +84,20 @@ namespace Perspex.Direct2D1.Media
         /// </summary>
         /// <param name="pen">The stroke pen.</param>
         /// <param name="p1">The first point of the line.</param>
-        /// <param name="p1">The second point of the line.</param>
+        /// <param name="p2">The second point of the line.</param>
         public void DrawLine(Pen pen, Perspex.Point p1, Perspex.Point p2)
         {
             if (pen != null)
             {
                 using (var d2dBrush = pen.Brush.ToDirect2D(this.renderTarget))
+                using (var d2dStroke = pen.ToDirect2DStrokeStyle(this.renderTarget))
                 {
-                    this.renderTarget.DrawLine(p1.ToSharpDX(), p2.ToSharpDX(), d2dBrush);
+                    this.renderTarget.DrawLine(
+                        p1.ToSharpDX(),
+                        p2.ToSharpDX(),
+                        d2dBrush,
+                        (float)pen.Thickness,
+                        d2dStroke);
                 }
             }
         }
@@ -106,9 +122,10 @@ namespace Perspex.Direct2D1.Media
             if (pen != null)
             {
                 using (var d2dBrush = pen.Brush.ToDirect2D(this.renderTarget))
+                using (var d2dStroke = pen.ToDirect2DStrokeStyle(this.renderTarget))
                 {
                     GeometryImpl impl = (GeometryImpl)geometry.PlatformImpl;
-                    this.renderTarget.DrawGeometry(impl.Geometry, d2dBrush, (float)pen.Thickness);
+                    this.renderTarget.DrawGeometry(impl.Geometry, d2dBrush, (float)pen.Thickness, d2dStroke);
                 }
             }
         }
@@ -118,14 +135,17 @@ namespace Perspex.Direct2D1.Media
         /// </summary>
         /// <param name="pen">The pen.</param>
         /// <param name="rect">The rectangle bounds.</param>
-        public void DrawRectange(Pen pen, Rect rect)
+        /// <param name="cornerRadius">The corner radius.</param>
+        public void DrawRectange(Pen pen, Rect rect, float cornerRadius)
         {
             using (var brush = pen.Brush.ToDirect2D(this.renderTarget))
+            using (var d2dStroke = pen.ToDirect2DStrokeStyle(this.renderTarget))
             {
-                this.renderTarget.DrawRectangle(
-                    rect.ToDirect2D(),
+                this.renderTarget.DrawRoundedRectangle(
+                    new RoundedRectangle { Rect = rect.ToDirect2D(), RadiusX = cornerRadius, RadiusY = cornerRadius },
                     brush,
-                    (float)pen.Thickness);
+                    (float)pen.Thickness,
+                    d2dStroke);
             }
         }
 
@@ -153,16 +173,22 @@ namespace Perspex.Direct2D1.Media
         /// </summary>
         /// <param name="brush">The brush.</param>
         /// <param name="rect">The rectangle bounds.</param>
-        public void FillRectange(Perspex.Media.Brush brush, Rect rect)
+        /// <param name="cornerRadius">The corner radius.</param>
+        public void FillRectange(Perspex.Media.Brush brush, Rect rect, float cornerRadius)
         {
             using (var b = brush.ToDirect2D(this.renderTarget))
             {
-                this.renderTarget.FillRectangle(
-                    new RectangleF(
-                        (float)rect.X,
-                        (float)rect.Y,
-                        (float)rect.Width,
-                        (float)rect.Height),
+                this.renderTarget.FillRoundedRectangle(
+                    new RoundedRectangle
+                    {
+                        Rect = new RectangleF(
+                                (float)rect.X,
+                                (float)rect.Y,
+                                (float)rect.Width,
+                                (float)rect.Height),
+                        RadiusX = cornerRadius,
+                        RadiusY = cornerRadius
+                    },
                     b);
             }
         }
@@ -180,6 +206,37 @@ namespace Perspex.Direct2D1.Media
             {
                 this.renderTarget.PopAxisAlignedClip();
             });
+        }
+
+        /// <summary>
+        /// Pushes an opacity value.
+        /// </summary>
+        /// <param name="opacity">The opacity.</param>
+        /// <returns>A disposable used to undo the opacity.</returns>
+        public IDisposable PushOpacity(double opacity)
+        {
+            if (opacity < 1)
+            {
+                var parameters = new LayerParameters
+                {
+                    ContentBounds = RectangleF.Infinite,
+                    MaskTransform = Matrix3x2.Identity,
+                    Opacity = (float)opacity,
+                };
+
+                var layer = new Layer(this.renderTarget);
+
+                this.renderTarget.PushLayer(ref parameters, layer);
+
+                return Disposable.Create(() =>
+                {
+                    this.renderTarget.PopLayer();
+                });
+            }
+            else
+            {
+                return Disposable.Empty;
+            }
         }
 
         /// <summary>

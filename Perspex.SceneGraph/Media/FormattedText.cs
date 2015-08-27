@@ -18,20 +18,24 @@ namespace Perspex.Media
             string fontFamilyName,
             double fontSize,
             FontStyle fontStyle,
+            TextAlignment textAlignment,
             FontWeight fontWeight)
         {
             this.Text = text;
             this.FontFamilyName = fontFamilyName;
             this.FontSize = fontSize;
             this.FontStyle = fontStyle;
+            this.FontWeight = fontWeight;
+            this.TextAlignment = textAlignment;
 
             var platform = Locator.Current.GetService<IPlatformRenderInterface>();
 
             this.PlatformImpl = platform.CreateFormattedText(
-                text, 
-                fontFamilyName, 
-                fontSize, 
-                fontStyle, 
+                text,
+                fontFamilyName,
+                fontSize,
+                fontStyle,
+                textAlignment,
                 fontWeight);
         }
 
@@ -59,6 +63,12 @@ namespace Perspex.Media
             private set;
         }
 
+        public FontWeight FontWeight
+        {
+            get;
+            private set;
+        }
+
         public string Text
         {
             get;
@@ -66,6 +76,12 @@ namespace Perspex.Media
         }
 
         public IFormattedTextImpl PlatformImpl
+        {
+            get;
+            private set;
+        }
+
+        public TextAlignment TextAlignment
         {
             get;
             private set;
@@ -106,4 +122,4 @@ namespace Perspex.Media
             this.PlatformImpl.SetForegroundBrush(brush, startIndex, count);
         }
     }
-} 
+}

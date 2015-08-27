@@ -7,9 +7,10 @@
 namespace Perspex.Controls.Presenters
 {
     using Perspex.Controls.Primitives;
+    using Perspex.Styling;
 
     /// <summary>
-    /// Interface for presenters such as <see cref="ContentPresenter"/> and 
+    /// Interface for presenters such as <see cref="ContentPresenter"/> and
     /// <see cref="ItemsPresenter"/>.
     /// </summary>
     /// <remarks>
@@ -18,7 +19,7 @@ namespace Perspex.Controls.Presenters
     /// of a <see cref="TemplatedControl"/> then that signals that the visual child
     /// of the presenter is not a part of the template.
     /// </remarks>
-    public interface IPresenter : IVisual
+    public interface IPresenter : IControl, INamed
     {
     }
 }

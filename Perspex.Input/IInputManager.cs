@@ -14,10 +14,8 @@ namespace Perspex.Input
     {
         IObservable<RawInputEventArgs> RawEventReceived { get; }
 
-        void ClearPointerOver(IPointerDevice device);
+        IObservable<RawInputEventArgs> PostProcess { get; }
 
         void Process(RawInputEventArgs e);
-
-        void SetPointerOver(IPointerDevice device, IVisual visual, Point p);
     }
 }

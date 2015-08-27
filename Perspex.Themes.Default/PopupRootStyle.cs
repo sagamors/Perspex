@@ -9,7 +9,8 @@ namespace Perspex.Themes.Default
     using System.Linq;
     using Perspex.Controls;
     using Perspex.Controls.Presenters;
-    using Perspex.Media;
+    using Perspex.Controls.Primitives;
+    using Perspex.Controls.Templates;
     using Perspex.Styling;
 
     public class PopupRootStyle : Styles
@@ -22,7 +23,7 @@ namespace Perspex.Themes.Default
                 {
                     Setters = new[]
                     {
-                        new Setter(PopupRoot.TemplateProperty, ControlTemplate.Create<PopupRoot>(this.Template)),
+                        new Setter(PopupRoot.TemplateProperty, new ControlTemplate<PopupRoot>(this.Template)),
                         new Setter(PopupRoot.FontFamilyProperty, "Segoe UI"),
                         new Setter(PopupRoot.FontSizeProperty, 12.0),
                     },
@@ -35,9 +36,9 @@ namespace Perspex.Themes.Default
             return new Border
             {
                 [~Border.BackgroundProperty] = control[~PopupRoot.BackgroundProperty],
-                Content = new ContentPresenter
+                Child = new ContentPresenter
                 {
-                    Id = "contentPresenter",
+                    Name = "contentPresenter",
                     [~ContentPresenter.ContentProperty] = control[~PopupRoot.ContentProperty],
                 }
             };

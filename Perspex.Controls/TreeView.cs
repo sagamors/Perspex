@@ -6,91 +6,75 @@
 
 namespace Perspex.Controls
 {
+    using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.Linq;
     using Perspex.Controls.Generators;
-    using Perspex.Controls.Primitives;
     using Perspex.Input;
+    using Perspex.VisualTree;
 
-    public class TreeView : SelectingItemsControl
+    public class TreeView : ItemsControl
     {
-        protected override ItemContainerGenerator CreateItemContainerGenerator()
+        public static readonly PerspexProperty<object> SelectedItemProperty =
+            PerspexProperty.Register<TreeView, object>("SelectedItem");
+
+        static TreeView()
+        {
+            SelectedItemProperty.Changed.Subscribe(x =>
+            {
+                var control = x.Sender as TreeView;
+
+                if (control != null)
+                {
+                    control.SelectedItemChanged(x.NewValue);
+                }
+            });
+        }
+
+        public new ITreeItemContainerGenerator ItemContainerGenerator
+        {
+            get { return (ITreeItemContainerGenerator)base.ItemContainerGenerator; }
+        }
+
+        public object SelectedItem
+        {
+            get { return this.GetValue(SelectedItemProperty); }
+            set { this.SetValue(SelectedItemProperty, value); }
+        }
+
+        protected override IItemContainerGenerator CreateItemContainerGenerator()
         {
             return new TreeItemContainerGenerator<TreeViewItem>(this);
         }
 
-        protected override void MoveSelection(FocusNavigationDirection direction)
+        protected override void OnGotFocus(GotFocusEventArgs e)
         {
-            // TODO: Up and down movement is a *HACK* and probably pretty slow. Probably needs
-            // rewriting at some point.
-            if (this.SelectedItem != null)
+            var control = (IControl)e.Source;
+            var item = this.ItemContainerGenerator.ItemFromContainer(control);
+
+            if (item != null)
             {
-                switch (direction)
-                {
-                    case FocusNavigationDirection.Up:
-                        {
-                            var list = this.Flatten();
-                            var index = list.IndexOf(this.SelectedItem);
-
-                            if (index > 0)
-                            {
-                                this.SelectedItem = list[index - 1];
-                            }
-
-                            break;
-                        }
-
-                    case FocusNavigationDirection.Down:
-                        {
-                            var list = this.Flatten();
-                            var index = list.IndexOf(this.SelectedItem);
-
-                            if (index + 1 < list.Count)
-                            {
-                                this.SelectedItem = list[index + 1];
-                            }
-
-                            break;
-                        }
-
-                    case FocusNavigationDirection.Left:
-                        {
-                            var node = (TreeViewItem)this.ItemContainerGenerator.GetContainerForItem(this.SelectedItem);
-                            node.IsExpanded = false;
-                            break;
-                        }
-
-                    case FocusNavigationDirection.Right:
-                        {
-                            var node = (TreeViewItem)this.ItemContainerGenerator.GetContainerForItem(this.SelectedItem);
-                            node.IsExpanded = true;
-                            break;
-                        }
-                }
+                this.SelectedItem = item;
+                e.Handled = true;
             }
         }
 
-        private List<object> Flatten()
+        private void SelectedItemChanged(object selected)
         {
-            var result = new List<object>();
-            this.Flatten(this.Items, result);
-            return result;
-        }
+            var containers = this.ItemContainerGenerator.GetAllContainers().OfType<ISelectable>();
+            var selectedContainer = (selected != null) ?
+                this.ItemContainerGenerator.ContainerFromItem(selected) :
+                null;
 
-        private void Flatten(IEnumerable items, List<object> result)
-        {
-            if (items != null)
+            if (this.Presenter != null && this.Presenter.Panel != null)
             {
-                foreach (object item in items)
-                {
-                    var container = (TreeViewItem)this.ItemContainerGenerator.GetContainerForItem(item);
-                    result.Add(item);
+                KeyboardNavigation.SetTabOnceActiveElement(this.Presenter.Panel, selectedContainer);
+            }
 
-                    if (container.IsExpanded)
-                    {
-                        this.Flatten(container.Items, result);
-                    }
-                }
+            foreach (var item in containers)
+            {
+                item.IsSelected = item == selectedContainer;
             }
         }
     }

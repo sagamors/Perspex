@@ -6,6 +6,7 @@
 
 namespace Perspex.Rendering
 {
+    using System.Linq;
     using Perspex.Media;
     using Perspex.Platform;
 
@@ -18,7 +19,7 @@ namespace Perspex.Rendering
     public abstract class RendererBase : IRenderer
     {
         /// <summary>
-        /// Gets the number of times <see cref="Render"/> has been called.
+        /// Gets the number of times <see cref="Render(IVisual, IPlatformHandle)"/> has been called.
         /// </summary>
         public int RenderCount
         {
@@ -49,7 +50,7 @@ namespace Perspex.Rendering
         public abstract void Resize(int width, int height);
 
         /// <summary>
-        /// When overriden by a derived class creates an <see cref="IDrawingContext"/> for a 
+        /// When overriden by a derived class creates an <see cref="IDrawingContext"/> for a
         /// rendering session.
         /// </summary>
         /// <param name="handle">The handle to use to create the context.</param>
@@ -61,9 +62,13 @@ namespace Perspex.Rendering
         /// </summary>
         /// <param name="visual">The visual to render.</param>
         /// <param name="context">The drawing context.</param>
+        /// <param name="translation">The current translation.</param>
+        /// <param name="transform">The current transform.</param>
         protected virtual void Render(IVisual visual, IDrawingContext context, Matrix translation, Matrix transform)
         {
-            if (visual.IsVisible && visual.Opacity > 0)
+            var opacity = visual.Opacity;
+
+            if (visual.IsVisible && opacity > 0)
             {
                 // Translate any existing transform into this controls coordinate system.
                 Matrix offset = Matrix.Translation(visual.Bounds.Position);
@@ -83,12 +88,13 @@ namespace Perspex.Rendering
                 var m = transform * translation;
                 var d = context.PushTransform(m);
 
+                using (context.PushOpacity(opacity))
                 using (visual.ClipToBounds ? context.PushClip(visual.Bounds) : null)
                 {
                     visual.Render(context);
                     d.Dispose();
 
-                    foreach (var child in visual.VisualChildren)
+                    foreach (var child in visual.VisualChildren.OrderBy(x => x.ZIndex))
                     {
                         this.Render(child, context, translation, transform);
                     }
