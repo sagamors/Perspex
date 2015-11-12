@@ -69,7 +69,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\Shared\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Direct2D1Platform.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Media\BrushWrapper.cs" />
     <Compile Include="Media\DrawingContext.cs" />
     <Compile Include="Media\Imaging\RenderTargetBitmapImpl.cs" />
